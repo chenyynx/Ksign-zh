@@ -45,45 +45,7 @@ struct FeatherApp: App {
 	}
 	
 	private func _handleURL(_ url: URL) {
-		if url.scheme == "ksign" {
-			if let fullPath = url.validatedScheme(after: "/source/") {
-				FR.handleSource(fullPath) { }
-			}
-			
-			if
-				let fullPath = url.validatedScheme(after: "/install/"),
-				let downloadURL = URL(string: fullPath)
-			{
-				_ = DownloadManager.shared.startDownload(from: downloadURL, id: "FeatherManualDownload_\(UUID().uuidString)")
-			}
-		} else {
-			// 分享 / “用其他应用打开”进来的 URL 可能带 security scope，也可能不带。
-			// 旧写法只在 file provider 路径下尝试取 scope，且取不到就静默 return，
-			// 于是「分享进来没反应」——这里改成尽力取、取不到也照样试，失败必须报错。
-			let ext = url.pathExtension.lowercased()
-			if ext == "ipa" || ext == "tipa" {
-				let didStart = url.startAccessingSecurityScopedResource()
-				
-				FR.handlePackageFile(url) { error in
-					if didStart {
-						url.stopAccessingSecurityScopedResource()
-					}
-					
-					if let error {
-						UIAlertController.showAlertWithOk(
-							title: "导入失败",
-							message: String(describing: error)
-						)
-					}
-				}
-				
-				return
-			}
-			
-            if url.pathExtension == "ksign" {
-                UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Ksign certificate file (.ksign) is now unsupported from v1.5.1, please refer to use .p12 and .mobileprovision instead."))
-            }
-		}
+		URLRouter.shared.handle(url)
 	}
 	
 }
@@ -94,6 +56,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         
+        // 冷启动时系统通过 launchOptions 投递 URL（此时 SwiftUI 视图还没挂载，
+        // .onOpenURL 收不到，必须在这里接）
+        if let url = launchOptions?[.url] as? URL {
+            URLRouter.shared.handle(url)
+        }
+
         _createPipeline()
         _createSourcesDirectory()
         // v2：老版本升级后也补写一次内置源（handleSource 会按 identifier 去重，不会重复添加）
@@ -114,6 +82,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
     
+    func application(
+        _ app: UIApplication,
+        open url: URL,
+        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+    ) -> Bool {
+        URLRouter.shared.handle(url)
+        return true
+    }
+
     private func _initializeBuiltInSources() { 
         Storage.shared.addBuiltInSources()
     }
