@@ -25,7 +25,7 @@ deps:
 	jq -er '.key1 + .key2' deps/pack.json > deps/server.pem
 	jq -er '.info.domains.commonName' deps/pack.json > deps/commonName.txt
 	rm -f deps/pack.json
-	@echo "--- bundled TLS material:" && head -1 deps/server.crt && grep -c BEGIN deps/server.crt && head -1 deps/server.pem && cat deps/commonName.txt
+	echo "--- bundled TLS material:" && head -1 deps/server.crt && grep -c BEGIN deps/server.crt && head -1 deps/server.pem && cat deps/commonName.txt
 
 $(SCHEMES): deps
 	xcodebuild \
