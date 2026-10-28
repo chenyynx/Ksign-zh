@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import NimbleViews
 
 struct DiagnosticsView: View {
 	@AppStorage("diag.buildTag") private var buildTag: String = "-"
