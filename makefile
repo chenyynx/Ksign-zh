@@ -17,12 +17,15 @@ clean:
 deps:
 	rm -rf deps || true
 	mkdir -p deps
-	curl -L -o deps/server.crt https://backloop.dev/backloop.dev-cert.crt || true
-	curl -L -o deps/server.key1 https://backloop.dev/backloop.dev-key.part1.pem || true
-	curl -L -o deps/server.key2 https://backloop.dev/backloop.dev-key.part2.pem || true
-	cat deps/server.key1 deps/server.key2 > deps/server.pem 2>/dev/null || true
-	rm -f deps/server.key1 deps/server.key2
-	echo "*.backloop.dev" > deps/commonName.txt
+	# backloop.dev 已改为只提供 pack.json（旧的 .crt/.key 直链 404，
+	# 以前会静默把 404 HTML 打进包里，导致本地 TLS 用废证书 → Safari 报“非私人连接”）
+	curl -fsSL https://backloop.dev/pack.json -o deps/pack.json
+	jq -er '.cert' deps/pack.json > deps/server.crt
+	jq -er '.ca' deps/pack.json >> deps/server.crt
+	jq -er '.key1 + .key2' deps/pack.json > deps/server.pem
+	jq -er '.info.domains.commonName' deps/pack.json > deps/commonName.txt
+	rm -f deps/pack.json
+	@echo "--- bundled TLS material:" && head -1 deps/server.crt && grep -c BEGIN deps/server.crt && head -1 deps/server.pem && cat deps/commonName.txt
 
 $(SCHEMES): deps
 	xcodebuild \
