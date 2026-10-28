@@ -71,6 +71,15 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
             return
         }
+        // 我们自己 decisionHandler(.cancel) 交给下载器时，WebKit 会抛 102（frame load
+        // interrupted by policy change）。这是预期流程，不是错误，不能弹。
+        if nsError.domain == WebKitErrorDomain && nsError.code == WebKitErrorFrameLoadInterruptedByPolicyChange {
+            return
+        }
+        // 用户主动点停止/关闭页面
+        if nsError.domain == WebKitErrorDomain && nsError.code == WebKitErrorCancelled {
+            return
+        }
         
         UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
     }

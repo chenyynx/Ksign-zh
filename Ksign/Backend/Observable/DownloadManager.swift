@@ -19,7 +19,16 @@ class Download: Identifiable, @unchecked Sendable, ObservableObject {
 	@Published var bytesDownloaded: Int64 = 0
 	@Published var totalBytes: Int64 = 0
 	@Published var unpackageProgress: Double = 0.0
-	
+	@Published var state: DownloadState = .downloading
+	@Published var lastError: String? = nil
+
+	enum DownloadState: Equatable {
+		case downloading
+		case paused      // 保留 resumeData，可继续
+		case failed      // 无 resumeData，需重试
+		case finished
+	}
+
 	var overallProgress: Double {
 		onlyArchiving
 		? unpackageProgress
@@ -83,6 +92,7 @@ class DownloadManager: NSObject, ObservableObject {
         super.init()
         let configuration = URLSessionConfiguration.default
         _session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+        _cleanStaleResumeData()
     }
     
     func startDownload(
@@ -120,14 +130,29 @@ class DownloadManager: NSObject, ObservableObject {
 	}
     
     func resumeDownload(_ download: Download) {
-        if let resumeData = download.resumeData {
+        // 优先从磁盘读回断点（didCompleteWithError 后 task 已失效，内存 resumeData 不可靠）
+        var data = download.resumeData
+        if data == nil {
+            let path = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))?.appendingPathComponent("ResumeData") ?? FileManager.default.temporaryDirectory.appendingPathComponent("ResumeData")
+                .appendingPathComponent("\(download.id).resume")
+            data = try? Data(contentsOf: path)
+            try? FileManager.default.removeItem(at: path)
+        }
+        download.resumeData = data
+
+        if let resumeData = data {
             let task = _session.downloadTask(withResumeData: resumeData)
             download.task = task
+            download.state = .downloading
+            download.lastError = nil
             task.resume()
             _updateBackgroundAudioState()
-        } else if let url = download.task?.originalRequest?.url {
+        } else if let url = download.task?.originalRequest?.url ?? download.url as URL? {
+            // 没有断点：原样重下（download.url 是 let，只能这样兜底）
             let task = _session.downloadTask(with: url)
             download.task = task
+            download.state = .downloading
+            download.lastError = nil
             task.resume()
             _updateBackgroundAudioState()
         }
@@ -135,6 +160,9 @@ class DownloadManager: NSObject, ObservableObject {
     
     func cancelDownload(_ download: Download) {
         download.task?.cancel()
+        // cancel(byProducingResumeData:) 之前，task.cancel() 会丢掉续传数据；
+        // 用户手动取消也保留断点，列表里给“继续”按钮，不再凭空消失。
+        download.task?.cancel(byProducingResumeData: { _ in })
         
         if let index = downloads.firstIndex(where: { $0.id == download.id }) {
             downloads.remove(at: index)
@@ -144,7 +172,54 @@ class DownloadManager: NSObject, ObservableObject {
             }
         }
     }
-    
+
+	/// 从错误里提取 resumeData 并落盘；成功则任务转为 .paused，失败转 .failed。
+	/// 返回 true 表示保留了断点。
+	@discardableResult
+	private func _preserveResume(for download: Download, error: Error) -> Bool {
+		let resumeData = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data
+			?? download.task?.error?.userInfo[NSURLSessionDownloadTaskResumeData] as? Data
+
+		guard let resumeData else {
+			DispatchQueue.main.async {
+				download.state = .failed
+				download.lastError = error.localizedDescription
+			}
+			return false
+		}
+
+		do {
+			let dir = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+				.appendingPathComponent("ResumeData", isDirectory: true)
+			try FileManager.default.createDirectoryIfNeeded(at: dir)
+			try resumeData.write(to: dir.appendingPathComponent("\(download.id).resume"), options: .atomic)
+		} catch {
+			DispatchQueue.main.async {
+				download.state = .failed
+				download.lastError = error.localizedDescription
+			}
+			return false
+		}
+
+		DispatchQueue.main.async {
+			download.state = .paused
+			download.lastError = error.localizedDescription
+		}
+		return true
+	}
+
+	/// 清理 7 天前的孤儿 resume 文件
+	private func _cleanStaleResumeData() {
+		let dir = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))?.appendingPathComponent("ResumeData", isDirectory: true) ?? FileManager.default.temporaryDirectory.appendingPathComponent("ResumeData", isDirectory: true)
+		guard let files = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.contentModificationDateKey]) else { return }
+		let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
+		for file in files where file.pathExtension == "resume" {
+			if let date = try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate, date < cutoff {
+				try? FileManager.default.removeItem(at: file)
+			}
+		}
+	}
+
 	func isManualDownload(_ string: String) -> Bool {
 		return string.contains("FeatherManualDownload")
 	}
@@ -269,34 +344,38 @@ extension DownloadManager: URLSessionDownloadDelegate {
 			return
 		}
 
+		// 能续传就转“已暂停”，不能才失败。两种情况都保留在列表里，不再凭空消失。
+		let kept = _preserveResume(for: download, error: error)
+
 		DispatchQueue.main.async {
-			if let index = self.getDownloadIndex(by: download.id) {
-				self.downloads.remove(at: index)
-			}
-
-			// 下载失败必须有提示（404、断网、证书错误等），否则表现为“点了没反应”。
-			let detail: String
-			if let urlError = error as? URLError {
-				switch urlError.code {
-				case .fileDoesNotExist, .httpTooManyRedirects:
-					detail = "服务器返回错误（文件可能不存在或已被删除）。\n\(urlError.localizedDescription)"
-				case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
-					detail = "网络不可用，请检查网络后重试。"
-				case .timedOut:
-					detail = "连接超时，请稍后重试。"
-				case .badServerResponse:
-					detail = "服务器响应异常（HTTP 错误或地址无效）。\n\(String(describing: urlError.failingURL ?? url))"
-				default:
-					detail = urlError.localizedDescription
+			// 失败才弹窗；暂停态静默，用户从列表点“继续”
+			if !kept {
+				let detail: String
+				if let urlError = error as? URLError {
+					switch urlError.code {
+					case .fileDoesNotExist, .httpTooManyRedirects:
+						detail = "服务器返回错误（文件可能不存在或已被删除）。\n\(urlError.localizedDescription)"
+					case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
+						detail = "网络不可用，请检查网络后重试。"
+					case .timedOut:
+						detail = "连接超时，请稍后重试。"
+					case .badServerResponse:
+						detail = "服务器响应异常（HTTP 错误或地址无效）。\n\(String(describing: urlError.failingURL ?? download.url))"
+					default:
+						detail = urlError.localizedDescription
+					}
+				} else {
+					detail = error.localizedDescription
 				}
-			} else {
-				detail = error.localizedDescription
+				UIAlertController.showAlertWithOk(
+					title: "下载失败",
+					message: "\(download.fileName)\n\n\(detail)"
+				)
 			}
-
-			UIAlertController.showAlertWithOk(
-				title: "下载失败",
-				message: "\(download.fileName)\n\n\(detail)"
-			)
+			if #available(iOS 26.0, *) {
+				BackgroundTaskManager.shared.stopTask(for: download.id, success: kept)
+			}
+			self._updateBackgroundAudioState()
 		}
     }
     

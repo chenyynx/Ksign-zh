@@ -163,54 +163,91 @@ struct DownloadItemRow: View {
 struct AppStoreDownloadItemRow: View {
     @ObservedObject var download: Download
 //    let app: ASRepository.App
-    
+
     var body: some View {
         HStack(spacing: 12) {
             if #available(iOS 17.0, *) {
-                Image(systemName: download.unpackageProgress > 0 ? "doc.zipper" : "arrow.down.document")
+                Image(systemName: rowIcon)
                     .font(.title2)
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(download.state == .failed ? .red : .accentColor)
                     .frame(width: 32, height: 32)
                     .contentShape(Rectangle())
-                    .symbolEffect(.pulse)
+                    .symbolEffect(.pulse, isActive: download.state == .downloading)
             } else {
-                Image(systemName: download.unpackageProgress > 0 ? "doc.zipper" : "arrow.down.document")
+                Image(systemName: rowIcon)
                     .font(.title2)
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(download.state == .failed ? .red : .accentColor)
                     .frame(width: 32, height: 32)
                     .contentShape(Rectangle())
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(download.fileName)
                     .font(.body)
                     .lineLimit(1)
-                
-                Text(download.progressText)
+
+                Text(rowSubtitle)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(download.state == .failed ? .red : .secondary)
             }
-            
+
             Spacer()
             ZStack {
                 Circle()
                     .trim(from: 0, to: download.overallProgress)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.3, lineCap: .round))
+                    .stroke(download.state == .downloading ? Color.accentColor : Color.secondary,
+                            style: StrokeStyle(lineWidth: 2.3, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .frame(width: 31, height: 31)
                     .animation(.smooth, value:  download.overallProgress)
 
-                Image(systemName: download.overallProgress >= 0.75 ? "archivebox" : "square.fill")
+                Image(systemName: actionIcon)
                     .foregroundStyle(.tint)
                     .font(.footnote).bold()
                 }
                 .onTapGesture {
-                    if download.overallProgress <= 0.75 {
-                        DownloadManager.shared.cancelDownload(download)
-                    }
+                    handleTap()
                 }
         }
         .padding(.vertical, 6)
         .contentShape(Rectangle())
+    }
+
+    private var rowIcon: String {
+        switch download.state {
+        case .paused: return "pause.circle"
+        case .failed: return "exclamationmark.triangle"
+        default: return download.unpackageProgress > 0 ? "doc.zipper" : "arrow.down.document"
+        }
+    }
+
+    private var actionIcon: String {
+        switch download.state {
+        case .downloading: return download.overallProgress >= 0.75 ? "archivebox" : "square.fill"
+        case .paused: return "play.fill"
+        case .failed: return "arrow.clockwise"
+        case .finished: return "checkmark"
+        }
+    }
+
+    private var rowSubtitle: String {
+        switch download.state {
+        case .paused: return "已暂停 · \(download.progressText)"
+        case .failed: return download.lastError ?? "下载失败"
+        default: return download.progressText
+        }
+    }
+
+    private func handleTap() {
+        switch download.state {
+        case .downloading:
+            if download.overallProgress <= 0.75 {
+                DownloadManager.shared.cancelDownload(download)
+            }
+        case .paused, .failed:
+            DownloadManager.shared.resumeDownload(download)
+        case .finished:
+            break
+        }
     }
 }
