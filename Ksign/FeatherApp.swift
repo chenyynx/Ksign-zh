@@ -96,9 +96,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         
         _createPipeline()
         _createSourcesDirectory()
-        if !UserDefaults.standard.bool(forKey: "hasInitializedBuiltInSources") {
+        // v2：老版本升级后也补写一次内置源（handleSource 会按 identifier 去重，不会重复添加）
+        if !UserDefaults.standard.bool(forKey: "hasInitializedBuiltInSources.v2") {
             _initializeBuiltInSources()
-            UserDefaults.standard.set(true, forKey: "hasInitializedBuiltInSources")
+            UserDefaults.standard.set(true, forKey: "hasInitializedBuiltInSources.v2")
         }
         
         _clean()

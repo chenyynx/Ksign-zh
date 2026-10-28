@@ -37,6 +37,8 @@ struct SourceAppsView: View {
     
     @State var isLoading = true
     @State var hasLoadedOnce = false
+    @State private var hasFinishedLoading = false
+    @State private var _isAddingSourcePresenting = false
     @State private var _searchText = ""
     var fromAppStore: Bool = false
     
@@ -76,15 +78,47 @@ struct SourceAppsView: View {
                 )
                 .ignoresSafeArea()
             } else {
-                if #available(iOS 17, *) {
+                // 区分「加载中 / 没有源 / 加载失败」，不再用同一个转圈糊住三种情况
+                if #available(iOS 17.0, *) {
+                if isLoading && !hasFinishedLoading {
+                    ProgressView()
+                } else if _allSources.isEmpty {
                     ContentUnavailableView {
-                        ProgressView()
-                        Label(.localized("Fetching..."), systemImage: "")
+                        Label(.localized("No Sources"), systemImage: "tray")
                     } description: {
-                        Text(.localized("Stuck? Check if you have any sources added."))
+                        Text("还没有添加任何软件源。添加一个 AltStore 源地址即可在这里浏览应用。")
+                    } actions: {
+                        Button {
+                            _isAddingSourcePresenting = true
+                        } label: {
+                            Label("添加软件源", systemImage: "plus")
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                } else {
+                    ContentUnavailableView {
+                        Label("无法加载软件源", systemImage: "exclamationmark.triangle")
+                    } description: {
+                        Text("已添加 \(_allSources.count) 个源，但一个都没有加载成功。请检查网络，或进入软件源页面确认地址是否有效。")
+                    } actions: {
+                        Button {
+                            Task { await viewModel.fetchSources(_allSources, refresh: true) }
+                        } label: {
+                            Label(.localized("Reset"), systemImage: "arrow.clockwise")
+                        }
                     }
                 }
-                else { ProgressView() }
+                } else {
+                    if isLoading && !hasFinishedLoading {
+                        ProgressView()
+                    } else if _allSources.isEmpty {
+                        Text("还没有添加任何软件源")
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("无法加载软件源，请检查网络")
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
         }
         .navigationTitle(_navigationTitle)
@@ -155,6 +189,9 @@ struct SourceAppsView: View {
         .onChange(of: viewModel.isFinished) { _ in
             _load()
         }
+        .sheet(isPresented: $_isAddingSourcePresenting) {
+            SourcesAddView()
+        }
         .onChange(of: _sortOption) { newValue in
             _sortOptionRawValue = newValue.rawValue
         }
@@ -170,6 +207,7 @@ struct SourceAppsView: View {
         Task {
             let loadedSources = object.compactMap { viewModel.sources[$0] }
             _sources = loadedSources
+            hasFinishedLoading = true
             withAnimation(.easeIn(duration: 0.2)) {
                 isLoading = false
             }
