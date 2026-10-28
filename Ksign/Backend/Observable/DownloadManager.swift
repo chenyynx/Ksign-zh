@@ -194,6 +194,12 @@ extension DownloadManager: URLSessionDownloadDelegate {
 				}
 				if err == nil {
 					self._notifyDownloadCompleted(fileName: url.lastPathComponent)
+				} else {
+					// 下载完成后解压/导入失败也要提示，之前只 print。
+					UIAlertController.showAlertWithOk(
+						title: "导入失败",
+						message: "\(url.lastPathComponent)\n\n\(String(describing: err!))"
+					)
 				}
 				completion(err)
 			}
@@ -256,17 +262,41 @@ extension DownloadManager: URLSessionDownloadDelegate {
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard
-			let _ = error,
+			let error,
 			let downloadTask = task as? URLSessionDownloadTask,
 			let download = getDownloadTask(by: downloadTask)
 		else {
 			return
 		}
-		
+
 		DispatchQueue.main.async {
 			if let index = self.getDownloadIndex(by: download.id) {
 				self.downloads.remove(at: index)
 			}
+
+			// 下载失败必须有提示（404、断网、证书错误等），否则表现为“点了没反应”。
+			let detail: String
+			if let urlError = error as? URLError {
+				switch urlError.code {
+				case .fileDoesNotExist, .httpTooManyRedirects:
+					detail = "服务器返回错误（文件可能不存在或已被删除）。\n\(urlError.localizedDescription)"
+				case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
+					detail = "网络不可用，请检查网络后重试。"
+				case .timedOut:
+					detail = "连接超时，请稍后重试。"
+				case .badServerResponse:
+					detail = "服务器响应异常（HTTP 错误或地址无效）。\n\(String(describing: urlError.failingURL ?? url))"
+				default:
+					detail = urlError.localizedDescription
+				}
+			} else {
+				detail = error.localizedDescription
+			}
+
+			UIAlertController.showAlertWithOk(
+				title: "下载失败",
+				message: "\(download.fileName)\n\n\(detail)"
+			)
 		}
     }
     
