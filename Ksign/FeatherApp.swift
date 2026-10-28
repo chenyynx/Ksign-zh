@@ -29,9 +29,9 @@ struct FeatherApp: App {
 					.transition(.move(edge: .top).combined(with: .opacity))
 				VariedTabbarView()
 					.environment(\.managedObjectContext, storage.context)
-					.onOpenURL(perform: _handleURL)
 					.transition(.move(edge: .top).combined(with: .opacity))
 			}
+			.onOpenURL(perform: _handleURL)
 			.animation(.smooth, value: downloadManager.manualDownloads.description)
             .animation(.smooth, value: extractManager.extractItems.description)
 			.onReceive(accentColorManager.objectWillChange) { _ in
@@ -45,6 +45,7 @@ struct FeatherApp: App {
 	}
 	
 	private func _handleURL(_ url: URL) {
+		print("[FeatherApp] onOpenURL fired")
 		URLRouter.shared.handle(url)
 	}
 	
@@ -56,6 +57,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            URLRouter.importInboxFiles()
+        }
+
         // 冷启动时系统通过 launchOptions 投递 URL（此时 SwiftUI 视图还没挂载，
         // .onOpenURL 收不到，必须在这里接）
         if let url = launchOptions?[.url] as? URL {

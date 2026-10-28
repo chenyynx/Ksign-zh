@@ -50,6 +50,19 @@
 				<string>nya.asami.ksign.cert</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>iOS Package Archive (system)</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.apple.itunes.ipa</string>
+				<string>com.apple.itunes.ipa.archive</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleIcons</key>
 	<dict>
