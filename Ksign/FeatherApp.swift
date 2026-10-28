@@ -57,12 +57,24 @@ struct FeatherApp: App {
 				_ = DownloadManager.shared.startDownload(from: downloadURL, id: "FeatherManualDownload_\(UUID().uuidString)")
 			}
 		} else {
-			if url.pathExtension == "ipa" || url.pathExtension == "tipa" {
-				if FileManager.default.isFileFromFileProvider(at: url) {
-					guard url.startAccessingSecurityScopedResource() else { return }
-					FR.handlePackageFile(url) { _ in }
-				} else {
-					FR.handlePackageFile(url) { _ in }
+			// 分享 / “用其他应用打开”进来的 URL 可能带 security scope，也可能不带。
+			// 旧写法只在 file provider 路径下尝试取 scope，且取不到就静默 return，
+			// 于是「分享进来没反应」——这里改成尽力取、取不到也照样试，失败必须报错。
+			let ext = url.pathExtension.lowercased()
+			if ext == "ipa" || ext == "tipa" {
+				let didStart = url.startAccessingSecurityScopedResource()
+				
+				FR.handlePackageFile(url) { error in
+					if didStart {
+						url.stopAccessingSecurityScopedResource()
+					}
+					
+					if let error {
+						UIAlertController.showAlertWithOk(
+							title: "导入失败",
+							message: String(describing: error)
+						)
+					}
 				}
 				
 				return
