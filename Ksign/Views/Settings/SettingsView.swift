@@ -65,6 +65,9 @@ struct SettingsView: View {
                 }
 				
 				NBSection(.localized("Features")) {
+                    NavigationLink(destination: DiagnosticsView()) {
+                        Label("诊断", systemImage: "stethoscope")
+                    }
                     NavigationLink(destination: LogsView(manager: LogsManager.shared)) {
                         Label(.localized("Logs"), systemImage: "apple.terminal")
                     }

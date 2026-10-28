@@ -13,6 +13,7 @@ import IDeviceSwift
 @main
 struct FeatherApp: App {
 	@UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+	@Environment(\.scenePhase) private var scenePhase
 	let heartbeat = HeartbeatManager.shared
 	@StateObject var downloadManager = DownloadManager.shared
 	@StateObject var accentColorManager = AccentColorManager.shared
@@ -36,6 +37,11 @@ struct FeatherApp: App {
             .animation(.smooth, value: extractManager.extractItems.description)
 			.onReceive(accentColorManager.objectWillChange) { _ in
 				accentColorManager.updateGlobalTintColor()
+			}
+			.onChange(of: scenePhase) { phase in
+				if phase == .active {
+					URLRouter.importInboxFiles()
+				}
 			}
 			.onAppear {
 				accentColorManager.updateGlobalTintColor()

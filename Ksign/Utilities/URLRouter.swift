@@ -16,6 +16,7 @@ final class URLRouter {
 
 	func handle(_ url: URL) {
 		print("[URLRouter] received: \(url.absoluteString) ext=\(url.pathExtension)")
+		UserDefaults.standard.set("\(url.absoluteString)\n(ext=\(url.pathExtension))", forKey: "diag.lastURL")
 
 		if url.scheme == "ksign" {
 			if let fullPath = url.validatedScheme(after: "/source/") {
@@ -46,12 +47,14 @@ final class URLRouter {
 
 				if let error {
 					print("[URLRouter] import failed: \(String(describing: error))")
+					UserDefaults.standard.set("失败：\(String(describing: error))", forKey: "diag.lastResult")
 					Self.present(
 						title: "导入失败",
 						message: "\(url.lastPathComponent)\n\n\(String(describing: error))"
 					)
 				} else {
 					print("[URLRouter] import finished: \(url.lastPathComponent)")
+					UserDefaults.standard.set("成功：\(url.lastPathComponent)", forKey: "diag.lastResult")
 				}
 			}
 			return
