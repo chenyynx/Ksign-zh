@@ -177,8 +177,10 @@ class DownloadManager: NSObject, ObservableObject {
 	/// 返回 true 表示保留了断点。
 	@discardableResult
 	private func _preserveResume(for download: Download, error: Error) -> Bool {
-		let resumeData = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data
-			?? download.task?.error?.userInfo[NSURLSessionDownloadTaskResumeData] as? Data
+		let userInfo = (error as NSError).userInfo
+		let taskUserInfo = download.task?.error.map({ ($0 as NSError).userInfo }) ?? [:]
+		let resumeData = (userInfo[NSURLSessionDownloadTaskResumeData] as? Data)
+			?? (taskUserInfo[NSURLSessionDownloadTaskResumeData] as? Data)
 
 		guard let resumeData else {
 			DispatchQueue.main.async {
@@ -192,7 +194,7 @@ class DownloadManager: NSObject, ObservableObject {
 			let dir = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
 				.appendingPathComponent("ResumeData", isDirectory: true)
 			try FileManager.default.createDirectoryIfNeeded(at: dir)
-			try resumeData.write(to: dir.appendingPathComponent("\(download.id).resume"), options: .atomic)
+			try resumeData.write(to: dir.appendingPathComponent("\(download.id).resume"), options: Data.WritingOptions.atomic)
 		} catch {
 			DispatchQueue.main.async {
 				download.state = .failed
