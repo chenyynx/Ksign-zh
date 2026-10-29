@@ -20,6 +20,9 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>nya.asami.ipa</string>
+				<string>com.apple.itunes.ipa</string>
+				<string>public.content</string>
+				<string>public.data</string>
 			</array>
 		</dict>
 		<dict>
@@ -34,6 +37,9 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>nya.asami.tipa</string>
+				<string>com.apple.itunes.ipa</string>
+				<string>public.content</string>
+				<string>public.data</string>
 			</array>
 		</dict>
 		<dict>

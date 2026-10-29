@@ -114,6 +114,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         DiagLog.resetIfNeeded()
         DiagLog.write("didFinishLaunching keys=\(launchOptions?.keys.map { $0.rawValue }.joined(separator: ",") ?? "nil")")
 
+        // 把实际安装包的文档配置写进日志：签名工具如果改过 plist，这里能看出来
+        let info = Bundle.main.infoDictionary
+        let types = (info?["CFBundleDocumentTypes"] as? [[String: Any]])?
+            .map { ($0["LSItemContentTypes"] as? [String])?.joined(separator: "|") ?? "-" }
+            .joined(separator: " ; ") ?? "nil"
+        DiagLog.write("build=\(DiagnosticsView.buildIdentifier)")
+        DiagLog.write("plist InPlace=\(info?["LSSupportsOpeningDocumentsInPlace"] ?? "nil") DocBrowser=\(info?["UISupportsDocumentBrowser"] ?? "nil")")
+        DiagLog.write("plist docTypes=\(types)")
+
         // Inbox 兜底多扫几次：系统复制文件的时机可能晚于 didFinishLaunching
         for delay in [0.0, 0.4, 1.0, 2.0, 4.0] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
