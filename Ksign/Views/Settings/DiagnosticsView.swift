@@ -14,6 +14,7 @@ struct DiagnosticsView: View {
 	@AppStorage("diag.lastResult") private var lastResult: String = "-"
 	@State private var inboxFiles: [String] = []
 	@State private var refreshedAt: Date = .init()
+	@State private var logTail: String = ""
 
 	var body: some View {
 		NBList("诊断") {
@@ -25,6 +26,14 @@ struct DiagnosticsView: View {
 			NBSection("文件打开") {
 				row("最近收到 URL", lastURL)
 				row("最近结果", lastResult)
+			}
+
+			NBSection("diag.log 最近 40 行") {
+				Text(logTail.isEmpty ? "（暂无日志）" : logTail)
+					.font(.system(size: 10, design: .monospaced))
+					.textSelection(.enabled)
+			} footer: {
+				Text("文件位置：文件 App → 我的 iPhone → Ksign → diag.log")
 			}
 
 			NBSection("Documents/Inbox") {
@@ -56,6 +65,11 @@ struct DiagnosticsView: View {
 	private func refresh() {
 		let inbox = URL.documentsDirectory.appendingPathComponent("Inbox", isDirectory: true)
 		inboxFiles = (try? FileManager.default.contentsOfDirectory(atPath: inbox.path)) ?? []
+
+		let logURL = URL.documentsDirectory.appendingPathComponent("diag.log")
+		if let content = try? String(contentsOf: logURL, encoding: .utf8) {
+			logTail = content.split(separator: "\n").suffix(40).joined(separator: "\n")
+		}
 		refreshedAt = Date()
 	}
 

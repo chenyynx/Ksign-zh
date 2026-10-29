@@ -39,6 +39,7 @@ struct FeatherApp: App {
 				accentColorManager.updateGlobalTintColor()
 			}
 			.onChange(of: scenePhase) { phase in
+				DiagLog.write("scenePhase=\(phase == .active ? "active" : "other")")
 				if phase == .active {
 					URLRouter.importInboxFiles()
 				}
@@ -51,6 +52,7 @@ struct FeatherApp: App {
 	}
 	
 	private func _handleURL(_ url: URL) {
+		DiagLog.write("onOpenURL \(url.absoluteString)")
 		print("[FeatherApp] onOpenURL fired")
 		URLRouter.shared.handle(url)
 	}
@@ -63,7 +65,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         
+        DiagLog.resetIfNeeded()
+        DiagLog.write("didFinishLaunching keys=\(launchOptions?.keys.map { $0.rawValue }.joined(separator: ",") ?? "nil")")
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            let inbox = URL.documentsDirectory.appendingPathComponent("Inbox", isDirectory: true)
+            let list = (try? FileManager.default.contentsOfDirectory(atPath: inbox.path)) ?? []
+            DiagLog.write("inbox scan: \(list.count) item(s) \(list)")
             URLRouter.importInboxFiles()
         }
 
@@ -98,6 +106,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         open url: URL,
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]
     ) -> Bool {
+        DiagLog.write("application(_:open:) \(url.absoluteString)")
         print("[AppDelegate] application(open:) fired")
         URLRouter.shared.handle(url)
         return true
@@ -112,6 +121,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         configurationForConnecting connectingSceneSession: UISceneSession,
         options: UIScene.ConnectionOptions
     ) -> UISceneConfiguration {
+        DiagLog.write("configurationForConnecting urlContexts=\(options.urlContexts.count)")
         if let url = options.urlContexts.first?.url {
             print("[AppDelegate] scene connecting with url: \(url.absoluteString)")
             UserDefaults.standard.set(url.absoluteString, forKey: "diag.lastURL")

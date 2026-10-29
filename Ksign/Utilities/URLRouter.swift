@@ -16,6 +16,7 @@ final class URLRouter {
 
 	func handle(_ url: URL) {
 		print("[URLRouter] received: \(url.absoluteString) ext=\(url.pathExtension)")
+		DiagLog.write("URLRouter.handle \(url.absoluteString)")
 		UserDefaults.standard.set("\(url.absoluteString)\n(ext=\(url.pathExtension))", forKey: "diag.lastURL")
 
 		if url.scheme == "ksign" {
