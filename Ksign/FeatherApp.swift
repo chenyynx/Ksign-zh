@@ -44,6 +44,7 @@ struct FeatherApp: App {
 				DiagLog.write("scenePhase=\(phase == .active ? "active" : "other")")
 				if phase == .active {
 					URLRouter.importInboxFiles()
+					URLRouter.sweepDocuments(reason: "active")
 					SharedInbox.mergeExtensionDiagnostics()
 					URLRouter.importSharedInbox()
 				}
@@ -89,6 +90,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 SharedInbox.mergeExtensionDiagnostics()
                 URLRouter.importSharedInbox()
             }
+        }
+
+        // Documents 根目录兜底：用户把 IPA 直接放进「文件 App → 我的 iPhone → Ksign」也能导入
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            URLRouter.sweepDocuments(reason: "launch")
         }
 
         // 冷启动时系统通过 launchOptions 投递 URL（此时 SwiftUI 视图还没挂载，

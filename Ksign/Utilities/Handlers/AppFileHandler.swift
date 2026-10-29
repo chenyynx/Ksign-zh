@@ -150,15 +150,24 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		}
 		
 		let bundle = Bundle(url: appUrl)
-		
-		Storage.shared.addImported(
-			uuid: _uuid,
-			appName: bundle?.name,
-			appIdentifier: bundle?.bundleIdentifier,
-			appVersion: bundle?.version,
-			appIcon: bundle?.iconFileName
-		) { _ in
-			print("[\(self._uuid)] Added to database")
+		let uuid = _uuid
+		let name = bundle?.name
+		let identifier = bundle?.bundleIdentifier
+		let version = bundle?.version
+		let icon = bundle?.iconFileName
+
+		// Core Data 的 viewContext 只能在主线程使用，
+		// 之前从 Task.detached 直接创建对象会静默不入库。
+		await MainActor.run {
+			Storage.shared.addImported(
+				uuid: uuid,
+				appName: name,
+				appIdentifier: identifier,
+				appVersion: version,
+				appIcon: icon
+			) { _ in
+				print("[\(uuid)] Added to database")
+			}
 		}
 	}
 	

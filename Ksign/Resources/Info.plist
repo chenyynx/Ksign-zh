@@ -20,9 +20,6 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>nya.asami.ipa</string>
-				<string>com.apple.itunes.ipa</string>
-				<string>public.content</string>
-				<string>public.data</string>
 			</array>
 		</dict>
 		<dict>
@@ -37,8 +34,6 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>nya.asami.tipa</string>
-				<string>public.content</string>
-				<string>public.data</string>
 			</array>
 		</dict>
 		<dict>
@@ -107,14 +102,7 @@
 	<key>UILaunchScreen</key>
 	<false/>
 	<key>UISupportsDocumentBrowser</key>
-	<false/>
-	<key>UIApplicationSceneManifest</key>
-	<dict>
-		<key>UIApplicationSupportsMultipleScenes</key>
-		<false/>
-		<key>UISceneConfigurations</key>
-		<dict/>
-	</dict>
+	<true/>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

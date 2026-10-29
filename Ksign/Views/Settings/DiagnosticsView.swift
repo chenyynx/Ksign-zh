@@ -13,6 +13,7 @@ struct DiagnosticsView: View {
 	@AppStorage("diag.lastURL") private var lastURL: String = "（尚未收到任何 URL）"
 	@AppStorage("diag.lastResult") private var lastResult: String = "-"
 	@State private var inboxFiles: [String] = []
+	@State private var documentsFiles: [String] = []
 	@State private var refreshedAt: Date = .init()
 	@State private var logTail: String = ""
 
@@ -28,12 +29,33 @@ struct DiagnosticsView: View {
 				row("最近结果", lastResult)
 			}
 
+			NBSection("文档配置（实际安装包）") {
+				row("InPlace", Self.info("LSSupportsOpeningDocumentsInPlace"))
+				row("DocBrowser", Self.info("UISupportsDocumentBrowser"))
+				row("多场景", Self.sceneMultipleScenes)
+				row("文档类型", Self.docTypes)
+			} footer: {
+				Text("用于确认装的是哪一套配置：上游官方是 InPlace=NO / DocBrowser=YES / 多场景=true / 只声明 nya.asami.ipa。")
+			}
+
 			NBSection("diag.log 最近 40 行") {
 				Text(logTail.isEmpty ? "（暂无日志）" : logTail)
 					.font(.system(size: 10, design: .monospaced))
 					.textSelection(.enabled)
 			} footer: {
 				Text("文件位置：文件 App → 我的 iPhone → Ksign → diag.log")
+			}
+
+			NBSection("Documents（手动放置也可导入）") {
+				if documentsFiles.isEmpty {
+					Text("暂无 IPA").foregroundColor(.secondary)
+				} else {
+					ForEach(documentsFiles, id: \.self) { name in
+						Text(name).font(.footnote)
+					}
+				}
+			} footer: {
+				Text("把 IPA 拷到「文件 App → 我的 iPhone → Ksign」，回到 App 即会自动导入。")
 			}
 
 			NBSection("Documents/Inbox") {
@@ -60,11 +82,38 @@ struct DiagnosticsView: View {
 		.refreshable { refresh() }
 	}
 
-	static let buildIdentifier = "doris-zh+inbox-20261029-b"
+	static let buildIdentifier = "doris-zh+upstream-doctypes-20261029-c"
+
+	static func info(_ key: String) -> String {
+		"\(Bundle.main.infoDictionary?[key] ?? "nil")"
+	}
+
+	static var sceneMultipleScenes: String {
+		guard
+			let manifest = Bundle.main.infoDictionary?["UIApplicationSceneManifest"] as? [String: Any],
+			let value = manifest["UIApplicationSupportsMultipleScenes"]
+		else { return "nil" }
+		return "\(value)"
+	}
+
+	static var docTypes: String {
+		guard let types = Bundle.main.infoDictionary?["CFBundleDocumentTypes"] as? [[String: Any]] else {
+			return "nil"
+		}
+		return types.map { entry in
+			let items = (entry["LSItemContentTypes"] as? [String])?.joined(separator: ",") ?? "-"
+			let name = entry["CFBundleTypeName"] as? String ?? "-"
+			return "\(name): \(items)"
+		}.joined(separator: "\n")
+	}
 
 	private func refresh() {
 		let inbox = URL.documentsDirectory.appendingPathComponent("Inbox", isDirectory: true)
 		inboxFiles = (try? FileManager.default.contentsOfDirectory(atPath: inbox.path)) ?? []
+
+		let docs = URL.documentsDirectory
+		let docsItems = (try? FileManager.default.contentsOfDirectory(atPath: docs.path)) ?? []
+		documentsFiles = docsItems.filter { ["ipa", "tipa"].contains(($0 as NSString).pathExtension.lowercased()) }
 
 		let logURL = URL.documentsDirectory.appendingPathComponent("diag.log")
 		if let content = try? String(contentsOf: logURL, encoding: .utf8) {

@@ -18,11 +18,14 @@ final class URLRouter {
 	static let shared = URLRouter()
 
 	/// 已经处理完的（或正在处理的）文件，避免 URL 与 Inbox 双通道重复导入
+	private static let _handledKey = "ksign.importHandled"
 	private let _lock = NSLock()
-	private var _handled: Set<String> = []
+	private var _handled: Set<String>
 	private var _inFlight: Set<String> = []
 
-	private init() {}
+	private init() {
+		_handled = Set(UserDefaults.standard.stringArray(forKey: Self._handledKey) ?? [])
+	}
 
 	func handle(_ url: URL, removeSource: Bool = false) {
 		DiagLog.write("URLRouter.handle \(url.absoluteString) ext=\(url.pathExtension)")
@@ -121,13 +124,16 @@ final class URLRouter {
 			self._lock.lock()
 			self._inFlight.remove(key)
 			if error == nil {
-				self._handled.insert(key)
+				self._rememberHandled(key)
 			}
 			self._lock.unlock()
 
-			// Inbox 里的副本导入完就删掉，否则会被反复扫到
+			// Inbox / 分享临时副本导入完就删掉，否则会被反复扫到
 			if removeSource {
 				try? FileManager.default.removeItem(at: url)
+				if url.path.contains("/KsignShared-") {
+					try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+				}
 			}
 
 			if let error {
@@ -144,8 +150,26 @@ final class URLRouter {
 		}
 	}
 
+	/// 记住已导入的文件（跨启动生效），否则 Documents 里的文件会被反复导入
+	private func _rememberHandled(_ key: String) {
+		_handled.insert(key)
+		var list = Array(_handled)
+		if list.count > 300 {
+			list = Array(list.suffix(300))
+			_handled = Set(list)
+		}
+		UserDefaults.standard.set(list, forKey: Self._handledKey)
+	}
+
 	private func _key(for url: URL) -> String {
-		let name = url.lastPathComponent.lowercased()
+		var name = url.lastPathComponent.lowercased()
+		// 去掉临时副本的 UUID 前缀，保证同一份 IPA 无论从哪条通道来都算同一个
+		if let range = name.range(
+			of: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-",
+			options: .regularExpression
+		) {
+			name.removeSubrange(range)
+		}
 		let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? -1
 		return "\(name)#\(size)"
 	}
@@ -155,15 +179,58 @@ final class URLRouter {
 	/// 分享扩展写入 App Group 的文件：先搬到沙盒临时目录再导入，避免异步读取时源文件被清理
 	static func importSharedInbox() {
 		SharedInbox.drain { file in
-			let temp = FileManager.default.temporaryDirectory
-				.appendingPathComponent("\(UUID().uuidString)-\(file.lastPathComponent)")
+			let dir = FileManager.default.temporaryDirectory
+				.appendingPathComponent("KsignShared-\(UUID().uuidString)", isDirectory: true)
+			let temp = dir.appendingPathComponent(file.lastPathComponent)
 			do {
+				try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
 				try FileManager.default.copyItem(at: file, to: temp)
 				try? FileManager.default.removeItem(at: file)
 				shared.handle(temp, removeSource: true)
 			} catch {
 				DiagLog.write("SharedInbox copy failed: \(error.localizedDescription)")
 			}
+		}
+	}
+
+	/// 手动兜底：用户把 IPA 直接放进「文件 App → 我的 iPhone → Ksign」。
+	/// 也兜住系统把文件投放到 Documents 其他子目录的情况。
+	static func sweepDocuments(reason: String) {
+		let fm = FileManager.default
+		let docs = URL.documentsDirectory
+		var found: [URL] = []
+
+		func isPackage(_ url: URL) -> Bool {
+			["ipa", "tipa"].contains(url.pathExtension.lowercased())
+		}
+
+		let items = (try? fm.contentsOfDirectory(
+			at: docs,
+			includingPropertiesForKeys: [.isDirectoryKey],
+			options: [.skipsHiddenFiles]
+		)) ?? []
+
+		for item in items {
+			if item.lastPathComponent == "Inbox" { continue }
+
+			var isDir: ObjCBool = false
+			guard fm.fileExists(atPath: item.path, isDirectory: &isDir) else { continue }
+
+			if isDir.boolValue {
+				let sub = (try? fm.contentsOfDirectory(
+					at: item,
+					includingPropertiesForKeys: nil,
+					options: [.skipsHiddenFiles]
+				)) ?? []
+				found.append(contentsOf: sub.filter(isPackage))
+			} else if isPackage(item) {
+				found.append(item)
+			}
+		}
+
+		DiagLog.write("Documents sweep(\(reason)): \(found.map(\.lastPathComponent))")
+		for file in found {
+			shared.handle(file, removeSource: false)
 		}
 	}
 

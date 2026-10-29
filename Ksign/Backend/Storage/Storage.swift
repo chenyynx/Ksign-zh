@@ -35,11 +35,17 @@ final class Storage: ObservableObject {
 	}
 	
 	func saveContext() {
-        DispatchQueue.main.async {
-            if self.context.hasChanges {
-                try? self.context.save()
-            }
-        }
+		if Thread.isMainThread {
+			if context.hasChanges {
+				try? context.save()
+			}
+		} else {
+			DispatchQueue.main.async {
+				if self.context.hasChanges {
+					try? self.context.save()
+				}
+			}
+		}
 	}
 	
 	func clearContext<T: NSManagedObject>(request: NSFetchRequest<T>) {

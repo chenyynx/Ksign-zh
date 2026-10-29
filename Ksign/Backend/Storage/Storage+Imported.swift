@@ -21,6 +21,10 @@ extension Storage {
 		
 		completion: @escaping (Error?) -> Void
 	) {
+		// 必须在主线程调用：viewContext 是 mainQueueConcurrencyType，
+		// 在 Task.detached 里直接创建对象属于跨线程使用，会静默不入库。
+		precondition(Thread.isMainThread, "addImported must be called on the main thread")
+
 		let generator = UIImpactFeedbackGenerator(style: .light)
 		
 		let new = Imported(context: context)
