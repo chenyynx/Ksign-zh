@@ -23,6 +23,7 @@
 		C42CC1AF2F4370F20064A4A2 /* IDeviceSwift in Frameworks */ = {isa = PBXBuildFile; productRef = C42CC1AE2F4370F20064A4A2 /* IDeviceSwift */; };
 		C451296C2E54F0DC00E94CC7 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = C451296B2E54F0DB00E94CC7 /* ZIPFoundation */; };
 		C4CEAE0C2DDF4735007EF880 /* ArArchiveKit in Frameworks */ = {isa = PBXBuildFile; productRef = C4CEAE0B2DDF4735007EF880 /* ArArchiveKit */; };
+		DD0000000000000000000003 /* KsignShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000001 /* KsignShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,12 +34,34 @@
 			remoteGlobalIDString = 3379C1B82DA869A1004372DA;
 			remoteInfo = Feather;
 		};
+		DD000000000000000000000A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3379C1B12DA869A1004372DA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD0000000000000000000008;
+			remoteInfo = KsignShareExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DD0000000000000000000004 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				DD0000000000000000000003 /* KsignShareExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		336D43972DB7454A00206400 /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.2.sdk/System/Library/Frameworks/MobileCoreServices.framework; sourceTree = DEVELOPER_DIR; };
 		3379C1B92DA869A1004372DA /* Ksign.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ksign.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AABA5D192DB3C87800BFCD2C /* KsignTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KsignTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD0000000000000000000001 /* KsignShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KsignShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -70,6 +93,13 @@
 				33CF134C2DB5B9BC0021D4C5 /* Exceptions for "Ksign" folder in "Copy Bundle Resources" phase from "Ksign" target */,
 			);
 			path = Ksign;
+			sourceTree = "<group>";
+		};
+		DD0000000000000000000002 /* KsignShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = KsignShareExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -105,6 +135,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DD0000000000000000000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -122,6 +159,7 @@
 				3379C1BB2DA869A1004372DA /* Ksign */,
 				3371F7302DA9ECDD00281AC6 /* Frameworks */,
 				3379C1BA2DA869A1004372DA /* Products */,
+				DD0000000000000000000002 /* KsignShareExtension */,
 			);
 			sourceTree = "<group>";
 		};
@@ -145,11 +183,13 @@
 				3379C1B62DA869A1004372DA /* Frameworks */,
 				3379C1B72DA869A1004372DA /* Resources */,
 				3379BC662DC9DB32004372DA /* Copy Acknowledgements */,
+				DD0000000000000000000004 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				339776072DC9D0F800642FFB /* PBXTargetDependency */,
+				DD0000000000000000000009 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				3379C1BB2DA869A1004372DA /* Ksign */,
@@ -195,6 +235,28 @@
 			productName = FeatherTests;
 			productReference = AABA5D192DB3C87800BFCD2C /* KsignTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		DD0000000000000000000008 /* KsignShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD000000000000000000000B /* Build configuration list for PBXNativeTarget "KsignShareExtension" */;
+			buildPhases = (
+				DD0000000000000000000005 /* Sources */,
+				DD0000000000000000000006 /* Frameworks */,
+				DD0000000000000000000007 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				DD0000000000000000000002 /* KsignShareExtension */,
+			);
+			name = KsignShareExtension;
+			packageProductDependencies = (
+			);
+			productName = KsignShareExtension;
+			productReference = DD0000000000000000000001 /* KsignShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -251,6 +313,7 @@
 			targets = (
 				3379C1B82DA869A1004372DA /* Ksign */,
 				AABA5D182DB3C87800BFCD2C /* KsignTests */,
+				DD0000000000000000000008 /* KsignShareExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -264,6 +327,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		AABA5D172DB3C87800BFCD2C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DD0000000000000000000007 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -304,6 +374,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DD0000000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -315,6 +392,11 @@
 			isa = PBXTargetDependency;
 			target = 3379C1B82DA869A1004372DA /* Ksign */;
 			targetProxy = AABA5D1D2DB3C87800BFCD2C /* PBXContainerItemProxy */;
+		};
+		DD0000000000000000000009 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD0000000000000000000008 /* KsignShareExtension */;
+			targetProxy = DD000000000000000000000A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -469,6 +551,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Ksign/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Ksign;
+				CODE_SIGN_ENTITLEMENTS = Entitlements/Ksign.entitlements;
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = NO;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright (c) 2025 Nagata Asami";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -535,6 +618,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Ksign/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Ksign;
+				CODE_SIGN_ENTITLEMENTS = Entitlements/Ksign.entitlements;
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = NO;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright (c) 2025 Nagata Asami";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -621,6 +705,66 @@
 			};
 			name = Release;
 		};
+		DD000000000000000000000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_ENTITLEMENTS = Entitlements/KsignShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KsignShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.6.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "nya.asami.ksign.share";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DD000000000000000000000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_ENTITLEMENTS = Entitlements/KsignShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KsignShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.6.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "nya.asami.ksign.share";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -647,6 +791,15 @@
 			buildConfigurations = (
 				AABA5D202DB3C87800BFCD2C /* Debug */,
 				AABA5D212DB3C87800BFCD2C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DD000000000000000000000B /* Build configuration list for PBXNativeTarget "KsignShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD000000000000000000000C /* Debug */,
+				DD000000000000000000000D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

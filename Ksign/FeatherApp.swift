@@ -42,6 +42,7 @@ struct FeatherApp: App {
 				DiagLog.write("scenePhase=\(phase == .active ? "active" : "other")")
 				if phase == .active {
 					URLRouter.importInboxFiles()
+					URLRouter.importSharedInbox()
 				}
 			}
 			.onAppear {
@@ -73,6 +74,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             let list = (try? FileManager.default.contentsOfDirectory(atPath: inbox.path)) ?? []
             DiagLog.write("inbox scan: \(list.count) item(s) \(list)")
             URLRouter.importInboxFiles()
+            URLRouter.importSharedInbox()
         }
 
         // 冷启动时系统通过 launchOptions 投递 URL（此时 SwiftUI 视图还没挂载，

@@ -20,6 +20,12 @@ final class URLRouter {
 		UserDefaults.standard.set("\(url.absoluteString)\n(ext=\(url.pathExtension))", forKey: "diag.lastURL")
 
 		if url.scheme == "ksign" {
+			if url.host == "share-import" || url.absoluteString.contains("share-import") {
+				DiagLog.write("URLRouter: share-import trigger")
+				Self.importSharedInbox()
+				return
+			}
+
 			if let fullPath = url.validatedScheme(after: "/source/") {
 				FR.handleSource(fullPath) { }
 			}
@@ -70,6 +76,21 @@ final class URLRouter {
 		}
 
 		print("[URLRouter] ignored unsupported url: \(url.absoluteString)")
+	}
+
+	/// 分享扩展写入 App Group 的文件：先搬到沙盒临时目录再导入，避免异步读取时源文件被清理
+	static func importSharedInbox() {
+		SharedInbox.drain { file in
+			let temp = FileManager.default.temporaryDirectory
+				.appendingPathComponent("\(UUID().uuidString)-\(file.lastPathComponent)")
+			do {
+				try FileManager.default.copyItem(at: file, to: temp)
+				try? FileManager.default.removeItem(at: file)
+				shared.handle(temp)
+			} catch {
+				DiagLog.write("SharedInbox copy failed: \(error.localizedDescription)")
+			}
+		}
 	}
 
 	/// 冷启动兜底：系统会把“用其他应用打开”的文件复制到 Documents/Inbox
