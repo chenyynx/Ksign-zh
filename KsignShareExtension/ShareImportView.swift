@@ -55,12 +55,7 @@ struct ShareImportView: View {
 				ToolbarItem(placement: .cancellationAction) {
 					Button("取消", action: onCancel)
 				}
-				ToolbarItem(placement: .confirmationAction) {
-					Button("导入") {
-						model.startImport()
-					}
-					.disabled(model.files.isEmpty || model.isImporting)
-				}
+
 			}
 			.overlay {
 				if model.isImporting {

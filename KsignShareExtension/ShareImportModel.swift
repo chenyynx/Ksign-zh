@@ -44,10 +44,11 @@ final class ShareImportModel: ObservableObject {
 					return
 				}
 
-				self.status = "已复制 \(copied) 个文件，正在打开 Ksign…"
+				self.status = "已发送到 Ksign，正在跳转…"
 				self.openHost?()
 
-				DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+				// 立刻结束扩展，让系统把主 App 切到前台
+				DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
 					self.finish?(true)
 				}
 			}

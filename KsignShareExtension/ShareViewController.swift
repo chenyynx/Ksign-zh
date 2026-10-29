@@ -45,6 +45,7 @@ final class ShareViewController: UIViewController {
 		controller.didMove(toParent: self)
 		hosting = controller
 
+		model.status = "正在接收文件…"
 		loadInputFiles()
 	}
 
@@ -78,6 +79,9 @@ final class ShareViewController: UIViewController {
 			guard let self else { return }
 			if self.model.files.isEmpty {
 				self.model.status = "这些内容不是可导入的文件（仅支持 .ipa / .tipa）"
+			} else {
+				// 直接开始，不需要用户再点一次「导入」
+				self.model.startImport()
 			}
 		}
 	}
