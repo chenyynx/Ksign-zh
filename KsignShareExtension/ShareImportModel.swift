@@ -10,6 +10,7 @@ final class ShareImportModel: ObservableObject {
 	@Published var files: [SharedFile] = []
 	@Published var status: String = ""
 	@Published var isImporting: Bool = false
+	@Published var isDone: Bool = false
 
 	var openHost: (() -> Void)?
 	var finish: ((Bool) -> Void)?
@@ -44,13 +45,11 @@ final class ShareImportModel: ObservableObject {
 					return
 				}
 
-				self.status = "已发送到 Ksign，正在跳转…"
-				self.openHost?()
+				self.isDone = true
+				self.status = ""
 
-				// 立刻结束扩展，让系统把主 App 切到前台
-				DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-					self.finish?(true)
-				}
+				// 尝试跳转（第三方签名下可能失败），但不依赖它
+				self.openHost?()
 			}
 		}
 	}

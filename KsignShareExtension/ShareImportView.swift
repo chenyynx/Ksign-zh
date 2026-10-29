@@ -53,12 +53,27 @@ struct ShareImportView: View {
 			.navigationBarTitleDisplayMode(.inline)
 			.toolbar {
 				ToolbarItem(placement: .cancellationAction) {
-					Button("取消", action: onCancel)
+					Button(model.isDone ? "完成" : "取消", action: onCancel)
 				}
 
 			}
 			.overlay {
-				if model.isImporting {
+				if model.isDone {
+					VStack(spacing: 14) {
+						Image(systemName: "checkmark.circle.fill")
+							.font(.system(size: 52))
+							.foregroundColor(.green)
+						Text("已导入到 Ksign")
+							.font(.headline)
+						Text("请切换到 Ksign 查看资料库")
+							.font(.subheadline)
+							.foregroundColor(.secondary)
+						Button("完成") { onCancel() }
+							.buttonStyle(.borderedProminent)
+					}
+					.padding(24)
+					.background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+				} else if model.isImporting {
 					ProgressView("正在导入…")
 						.padding()
 						.background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
