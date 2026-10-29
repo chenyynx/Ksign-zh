@@ -82,7 +82,7 @@ struct DiagnosticsView: View {
 		.refreshable { refresh() }
 	}
 
-	static let buildIdentifier = "doris-zh+docbrowser-off-20261029-e"
+	static let buildIdentifier = "doris-zh+scenedelegate-20261029-f"
 
 	static func info(_ key: String) -> String {
 		"\(Bundle.main.infoDictionary?[key] ?? "nil")"

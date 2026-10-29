@@ -14,61 +14,101 @@ import IDeviceSwift
 @main
 struct FeatherApp: App {
 	@UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-	@Environment(\.scenePhase) private var scenePhase
-	@State private var inboxTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
-	let heartbeat = HeartbeatManager.shared
-	@StateObject var downloadManager = DownloadManager.shared
-	@StateObject var accentColorManager = AccentColorManager.shared
-    @StateObject var extractManager = ExtractManager.shared
-	@StateObject var logsManager = LogsManager.shared
-	let storage = Storage.shared
 
 	var body: some Scene {
 		WindowGroup {
-			VStack {
-                ExtractHeaderView(extractManager: extractManager)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-				DownloadHeaderView(downloadManager: downloadManager)
-					.transition(.move(edge: .top).combined(with: .opacity))
-				VariedTabbarView()
-					.environment(\.managedObjectContext, storage.context)
-					.transition(.move(edge: .top).combined(with: .opacity))
-			}
-			.onOpenURL(perform: _handleURL)
-			.animation(.smooth, value: downloadManager.manualDownloads.description)
-            .animation(.smooth, value: extractManager.extractItems.description)
-			.onReceive(accentColorManager.objectWillChange) { _ in
-				accentColorManager.updateGlobalTintColor()
-			}
-			.onChange(of: scenePhase) { phase in
-				DiagLog.write("scenePhase=\(phase == .active ? "active" : "other")")
-				if phase == .active {
-					URLRouter.importInboxFiles()
-					URLRouter.sweepDocuments(reason: "active")
-					SharedInbox.mergeExtensionDiagnostics()
-					URLRouter.importSharedInbox()
-				}
-			}
-			// 兜底：App 在前台时定期看 Inbox。系统有时既不投递 URL、
-			// 复制又比 didFinishLaunching 晚，只靠生命周期回调会漏。
-			.onReceive(inboxTimer) { _ in
-				guard scenePhase == .active else { return }
-				URLRouter.importInboxFiles()
-				URLRouter.importSharedInbox()
-			}
-			.onAppear {
-				accentColorManager.updateGlobalTintColor()
-				if logsManager.isCapturing { logsManager.startCapture() }
-			}
+			RootView()
 		}
 	}
-	
+}
+
+/// 根视图：从 FeatherApp.body 抽出来。
+/// 这样做是为了让自定义 SceneDelegate 也能用 UIHostingController 挂载同一棵树
+/// （全能签就是 UIKit + SceneDelegate 的结构，URL 由 scene 回调直接接管）。
+struct RootView: View {
+	let heartbeat = HeartbeatManager.shared
+	@StateObject var downloadManager = DownloadManager.shared
+	@StateObject var accentColorManager = AccentColorManager.shared
+	@StateObject var extractManager = ExtractManager.shared
+	@StateObject var logsManager = LogsManager.shared
+	let storage = Storage.shared
+
+	@State private var inboxTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+
+	var body: some View {
+		VStack {
+			ExtractHeaderView(extractManager: extractManager)
+				.transition(.move(edge: .top).combined(with: .opacity))
+			DownloadHeaderView(downloadManager: downloadManager)
+				.transition(.move(edge: .top).combined(with: .opacity))
+			VariedTabbarView()
+				.environment(\.managedObjectContext, storage.context)
+				.transition(.move(edge: .top).combined(with: .opacity))
+		}
+		.onOpenURL(perform: _handleURL)
+		.animation(.smooth, value: downloadManager.manualDownloads.description)
+		.animation(.smooth, value: extractManager.extractItems.description)
+		.onReceive(accentColorManager.objectWillChange) { _ in
+			accentColorManager.updateGlobalTintColor()
+		}
+		// 不依赖 SwiftUI 的 scenePhase：自定义 SceneDelegate 挂载时
+		// scenePhase 环境值不一定驱动，直接听 UIKit 的激活通知更稳。
+		.onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+			DiagLog.write("didBecomeActive -> rescan")
+			URLRouter.importInboxFiles()
+			URLRouter.sweepDocuments(reason: "active")
+			SharedInbox.mergeExtensionDiagnostics()
+			URLRouter.importSharedInbox()
+		}
+		.onReceive(inboxTimer) { _ in
+			URLRouter.importInboxFiles()
+			URLRouter.importSharedInbox()
+		}
+		.onAppear {
+			accentColorManager.updateGlobalTintColor()
+			if logsManager.isCapturing { logsManager.startCapture() }
+		}
+	}
+
 	private func _handleURL(_ url: URL) {
 		DiagLog.write("onOpenURL \(url.absoluteString)")
-		print("[FeatherApp] onOpenURL fired")
+		print("[RootView] onOpenURL fired")
 		URLRouter.shared.handle(url)
 	}
-	
+}
+
+/// 和全能签同构：场景由自己的 SceneDelegate 建立，
+/// URL 从 scene:willConnectToSession:options: 与 scene:openURLContexts: 直接拿到，
+/// 不再依赖 SwiftUI 内部 scene delegate 是否把事件转给 .onOpenURL。
+@objc(KsignSceneDelegate)
+final class KsignSceneDelegate: UIResponder, UIWindowSceneDelegate {
+	var window: UIWindow?
+
+	func scene(
+		_ scene: UIScene,
+		willConnectTo session: UISceneSession,
+		options connectionOptions: UIScene.ConnectionOptions
+	) {
+		DiagLog.write("SceneDelegate willConnect urls=\(connectionOptions.urlContexts.count)")
+
+		guard let windowScene = scene as? UIWindowScene else { return }
+		let window = UIWindow(windowScene: windowScene)
+		window.rootViewController = UIHostingController(rootView: RootView())
+		self.window = window
+		window.makeKeyAndVisible()
+
+		for context in connectionOptions.urlContexts {
+			DiagLog.write("SceneDelegate cold-start url \(context.url.absoluteString)")
+			URLRouter.shared.handle(context.url)
+		}
+	}
+
+	func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+		DiagLog.write("SceneDelegate openURLContexts=\(URLContexts.count)")
+		for context in URLContexts {
+			URLRouter.shared.handle(context.url)
+		}
+	}
 }
 
 class AppDelegate: NSObject, UIApplicationDelegate {
