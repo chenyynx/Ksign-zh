@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 import Nuke
 import OSLog
 import IDeviceSwift
@@ -14,6 +15,7 @@ import IDeviceSwift
 struct FeatherApp: App {
 	@UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 	@Environment(\.scenePhase) private var scenePhase
+	@State private var inboxTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 	let heartbeat = HeartbeatManager.shared
 	@StateObject var downloadManager = DownloadManager.shared
 	@StateObject var accentColorManager = AccentColorManager.shared
@@ -46,6 +48,13 @@ struct FeatherApp: App {
 					URLRouter.importSharedInbox()
 				}
 			}
+			// 兜底：App 在前台时定期看 Inbox。系统有时既不投递 URL、
+			// 复制又比 didFinishLaunching 晚，只靠生命周期回调会漏。
+			.onReceive(inboxTimer) { _ in
+				guard scenePhase == .active else { return }
+				URLRouter.importInboxFiles()
+				URLRouter.importSharedInbox()
+			}
 			.onAppear {
 				accentColorManager.updateGlobalTintColor()
 				if logsManager.isCapturing { logsManager.startCapture() }
@@ -70,13 +79,16 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         DiagLog.resetIfNeeded()
         DiagLog.write("didFinishLaunching keys=\(launchOptions?.keys.map { $0.rawValue }.joined(separator: ",") ?? "nil")")
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            let inbox = URL.documentsDirectory.appendingPathComponent("Inbox", isDirectory: true)
-            let list = (try? FileManager.default.contentsOfDirectory(atPath: inbox.path)) ?? []
-            DiagLog.write("inbox scan: \(list.count) item(s) \(list)")
-            URLRouter.importInboxFiles()
-            SharedInbox.mergeExtensionDiagnostics()
-            URLRouter.importSharedInbox()
+        // Inbox 兜底多扫几次：系统复制文件的时机可能晚于 didFinishLaunching
+        for delay in [0.0, 0.4, 1.0, 2.0, 4.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                let inbox = URL.documentsDirectory.appendingPathComponent("Inbox", isDirectory: true)
+                let list = (try? FileManager.default.contentsOfDirectory(atPath: inbox.path)) ?? []
+                DiagLog.write("inbox scan(+\(delay)): \(list.count) item(s) \(list)")
+                URLRouter.importInboxFiles()
+                SharedInbox.mergeExtensionDiagnostics()
+                URLRouter.importSharedInbox()
+            }
         }
 
         // 冷启动时系统通过 launchOptions 投递 URL（此时 SwiftUI 视图还没挂载，
@@ -117,22 +129,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
 
 
-    /// 多场景保持开启：URL 可能随“新场景连接”一起到达，
-    /// 这里先接住再延迟投递。返回配置用 name: nil，沿用 Info.plist 默认配置，
-    /// 不改变场景能力，也不影响 SwiftUI 自己的 delegate。
-    func application(
-        _ application: UIApplication,
-        configurationForConnecting connectingSceneSession: UISceneSession,
-        options: UIScene.ConnectionOptions
-    ) -> UISceneConfiguration {
-        DiagLog.write("configurationForConnecting urlContexts=\(options.urlContexts.count)")
-        if let url = options.urlContexts.first?.url {
-            print("[AppDelegate] scene connecting with url: \(url.absoluteString)")
-            UserDefaults.standard.set(url.absoluteString, forKey: "diag.lastURL")
-            PendingURLStore.shared.url = url
-        }
-        return UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
-    }
 
     private func _initializeBuiltInSources() { 
         Storage.shared.addBuiltInSources()

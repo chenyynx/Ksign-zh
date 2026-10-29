@@ -21,15 +21,18 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 	private var _ipa: URL
 	private let _install: Bool
 	private let _download: Download?
+	private let _onProgress: ((Double) -> Void)?
 	
 	init(
 		file ipa: URL,
 		install: Bool = false,
-		download: Download? = nil
+		download: Download? = nil,
+		onProgress: ((Double) -> Void)? = nil
 	) {
 		self._ipa = ipa
 		self._install = install
 		self._download = download
+		self._onProgress = onProgress
 		self._uniqueWorkDir = _fileManager.temporaryDirectory
 			.appendingPathComponent("FeatherImport_\(_uuid)", isDirectory: true)
 		
@@ -81,6 +84,7 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 			overwrite: true,
 			password: nil,
 			progress: { progress in
+				self._onProgress?(progress)
 				if let download = download {
 					DispatchQueue.main.async {
 						download.unpackageProgress = progress
@@ -100,6 +104,7 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		
 		for (index, entry) in entries.enumerated() {
 			let progress = Double(index) / Double(totalEntries)
+			self._onProgress?(progress)
 			if let download = download {
 				DispatchQueue.main.async {
 					download.unpackageProgress = progress

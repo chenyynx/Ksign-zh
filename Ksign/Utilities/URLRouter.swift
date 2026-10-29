@@ -3,8 +3,12 @@
 //  Ksign
 //
 //  统一处理外部 URL：分享 / “用其他应用打开” / 自定义 scheme。
-//  Scene 生命周期下 application(_:open:) 不会被调用，.onOpenURL 是主路径；
-//  另外 Documents/Inbox 里系统会放一份副本，作为冷启动兜底。
+//
+//  文件打开有两条通道，必须都活着：
+//  ① 系统投递 URL（onOpenURL / launchOptions / scene openURLContexts）
+//  ② 系统把文件复制进 Documents/Inbox（LSSupportsOpeningDocumentsInPlace=NO 时）
+//  ②是兜底：URL 通道受场景生命周期影响，可能整条丢失，Inbox 不会。
+//  两条通道会指向同一个文件，所以这里用「文件名+大小」做去重。
 //
 
 import Foundation
@@ -12,11 +16,16 @@ import UIKit
 
 final class URLRouter {
 	static let shared = URLRouter()
+
+	/// 已经处理完的（或正在处理的）文件，避免 URL 与 Inbox 双通道重复导入
+	private let _lock = NSLock()
+	private var _handled: Set<String> = []
+	private var _inFlight: Set<String> = []
+
 	private init() {}
 
-	func handle(_ url: URL) {
-		print("[URLRouter] received: \(url.absoluteString) ext=\(url.pathExtension)")
-		DiagLog.write("URLRouter.handle \(url.absoluteString)")
+	func handle(_ url: URL, removeSource: Bool = false) {
+		DiagLog.write("URLRouter.handle \(url.absoluteString) ext=\(url.pathExtension)")
 		UserDefaults.standard.set("\(url.absoluteString)\n(ext=\(url.pathExtension))", forKey: "diag.lastURL")
 
 		if url.scheme == "ksign" {
@@ -44,26 +53,7 @@ final class URLRouter {
 
 		let ext = url.pathExtension.lowercased()
 		if ext == "ipa" || ext == "tipa" {
-			let didStart = url.startAccessingSecurityScopedResource()
-			print("[URLRouter] importing \(url.lastPathComponent) scope=\(didStart)")
-
-			FR.handlePackageFile(url) { error in
-				if didStart {
-					url.stopAccessingSecurityScopedResource()
-				}
-
-				if let error {
-					print("[URLRouter] import failed: \(String(describing: error))")
-					UserDefaults.standard.set("失败：\(String(describing: error))", forKey: "diag.lastResult")
-					Self.present(
-						title: "导入失败",
-						message: "\(url.lastPathComponent)\n\n\(String(describing: error))"
-					)
-				} else {
-					print("[URLRouter] import finished: \(url.lastPathComponent)")
-					UserDefaults.standard.set("成功：\(url.lastPathComponent)", forKey: "diag.lastResult")
-				}
-			}
+			_import(url, removeSource: removeSource)
 			return
 		}
 
@@ -75,8 +65,92 @@ final class URLRouter {
 			return
 		}
 
-		print("[URLRouter] ignored unsupported url: \(url.absoluteString)")
+		DiagLog.write("URLRouter: ignored unsupported url \(url.absoluteString)")
 	}
+
+	// MARK: - 导入
+
+	private func _import(_ url: URL, removeSource: Bool) {
+		let key = _key(for: url)
+
+		_lock.lock()
+		let alreadyDone = _handled.contains(key)
+		let running = _inFlight.contains(key)
+		if !alreadyDone && !running {
+			_inFlight.insert(key)
+		}
+		_lock.unlock()
+
+		if running {
+			// 同一文件正在导入，别打断，也别删（源文件还在被读）
+			return
+		}
+		if alreadyDone {
+			// 之前已经导过一次（同一文件经 URL 与 Inbox 两条通道到达），
+			// 这里只负责把 Inbox 里残留的副本清掉。
+			DiagLog.write("URLRouter: skip duplicate \(key)")
+			if removeSource {
+				try? FileManager.default.removeItem(at: url)
+			}
+			return
+		}
+
+		// 无条件尝试取 scope：返回 false 只代表「不是 security-scoped URL」，
+		// 不代表不能读。不能因为 false 就放弃（历史 bug：静默 return）。
+		let didStart = url.startAccessingSecurityScopedResource()
+		DiagLog.write("import start \(url.lastPathComponent) scope=\(didStart)")
+
+		let item = ExtractManager.shared.start(fileName: url.lastPathComponent)
+
+		// 导入是纯 CPU/IO 的后台任务，用户切走 App 时不能让系统把进程挂起
+		let bgTask = UIApplication.shared.beginBackgroundTask(withName: "ksign-import", expirationHandler: nil)
+
+		FR.handlePackageFile(url, progress: { value in
+			ExtractManager.shared.updateProgress(for: item, progress: value)
+		}) { error in
+			if didStart {
+				url.stopAccessingSecurityScopedResource()
+			}
+
+			ExtractManager.shared.finish(item: item)
+
+			if bgTask != .invalid {
+				UIApplication.shared.endBackgroundTask(bgTask)
+			}
+
+			self._lock.lock()
+			self._inFlight.remove(key)
+			if error == nil {
+				self._handled.insert(key)
+			}
+			self._lock.unlock()
+
+			// Inbox 里的副本导入完就删掉，否则会被反复扫到
+			if removeSource {
+				try? FileManager.default.removeItem(at: url)
+			}
+
+			if let error {
+				DiagLog.write("import failed \(url.lastPathComponent): \(error)")
+				UserDefaults.standard.set("失败：\(String(describing: error))", forKey: "diag.lastResult")
+				Self.present(
+					title: "导入失败",
+					message: "\(url.lastPathComponent)\n\n\(String(describing: error))"
+				)
+			} else {
+				DiagLog.write("import success \(url.lastPathComponent)")
+				UserDefaults.standard.set("成功：\(url.lastPathComponent)", forKey: "diag.lastResult")
+			}
+		}
+	}
+
+	private func _key(for url: URL) -> String {
+		let name = url.lastPathComponent.lowercased()
+		let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? -1
+		return "\(name)#\(size)"
+	}
+
+	// MARK: - 兜底入口
 
 	/// 分享扩展写入 App Group 的文件：先搬到沙盒临时目录再导入，避免异步读取时源文件被清理
 	static func importSharedInbox() {
@@ -86,19 +160,22 @@ final class URLRouter {
 			do {
 				try FileManager.default.copyItem(at: file, to: temp)
 				try? FileManager.default.removeItem(at: file)
-				shared.handle(temp)
+				shared.handle(temp, removeSource: true)
 			} catch {
 				DiagLog.write("SharedInbox copy failed: \(error.localizedDescription)")
 			}
 		}
 	}
 
-	/// 冷启动兜底：系统会把“用其他应用打开”的文件复制到 Documents/Inbox
+	/// 冷启动兜底：LSSupportsOpeningDocumentsInPlace=NO 时，系统会把
+	/// 「用其他应用打开」的文件复制到 Documents/Inbox。
 	static func importInboxFiles() {
 		let inbox = URL.documentsDirectory.appendingPathComponent("Inbox", isDirectory: true)
+
 		guard let files = try? FileManager.default.contentsOfDirectory(
 			at: inbox,
-			includingPropertiesForKeys: nil
+			includingPropertiesForKeys: [.fileSizeKey],
+			options: [.skipsHiddenFiles]
 		) else {
 			return
 		}
@@ -107,10 +184,11 @@ final class URLRouter {
 			["ipa", "tipa"].contains($0.pathExtension.lowercased())
 		}
 		guard !candidates.isEmpty else { return }
-		print("[URLRouter] inbox found \(candidates.count) file(s)")
+
+		DiagLog.write("Inbox scan: \(candidates.count) candidate(s) \(candidates.map(\.lastPathComponent))")
 
 		for file in candidates {
-			shared.handle(file)
+			shared.handle(file, removeSource: true)
 		}
 	}
 
@@ -124,7 +202,7 @@ final class URLRouter {
 				let root = scene?.windows.first(where: { $0.isKeyWindow })?.rootViewController
 					?? scene?.windows.first?.rootViewController
 			else {
-				print("[URLRouter] no presenter, alert skipped: \(title) / \(message)")
+				DiagLog.write("present skipped (no presenter): \(title) / \(message)")
 				return
 			}
 

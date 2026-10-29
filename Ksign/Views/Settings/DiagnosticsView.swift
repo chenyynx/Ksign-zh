@@ -60,7 +60,7 @@ struct DiagnosticsView: View {
 		.refreshable { refresh() }
 	}
 
-	static let buildIdentifier = "doris-zh+docfix-20261029"
+	static let buildIdentifier = "doris-zh+inbox-20261029-b"
 
 	private func refresh() {
 		let inbox = URL.documentsDirectory.appendingPathComponent("Inbox", isDirectory: true)
