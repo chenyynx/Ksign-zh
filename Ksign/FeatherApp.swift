@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 import Combine
 import Nuke
 import OSLog
@@ -87,25 +88,64 @@ struct RootView: View {
 /// URL 从 scene:willConnectToSession:options: 与 scene:openURLContexts: 直接拿到，
 /// 不再依赖 SwiftUI 内部 scene delegate 是否把事件转给 .onOpenURL。
 @objc(KsignSceneDelegate)
-final class KsignSceneDelegate: UIResponder, UIWindowSceneDelegate {
+final class KsignSceneDelegate: UIResponder, UIWindowSceneDelegate, UIDocumentBrowserViewControllerDelegate {
 	var window: UIWindow?
+
+	/// 签名工具可能把 UISupportsDocumentBrowser 改写成 YES（Ksign 旧版签名逻辑的 bug）。
+	/// 一旦为 YES，系统会把 App 当文档浏览器：既不投递 URL、也不复制 Inbox，
+	/// 只会把文件交给 UIDocumentBrowserViewController 的 delegate。
+	/// 所以这里按实际值决定用哪条接收通道 —— 不管签名时被改成什么都能收。
+	private var usesDocumentBrowser: Bool {
+		(Bundle.main.infoDictionary?["UISupportsDocumentBrowser"] as? NSNumber)?.boolValue ?? false
+	}
 
 	func scene(
 		_ scene: UIScene,
 		willConnectTo session: UISceneSession,
 		options connectionOptions: UIScene.ConnectionOptions
 	) {
-		DiagLog.write("SceneDelegate willConnect urls=\(connectionOptions.urlContexts.count)")
+		let docBrowser = usesDocumentBrowser
+		DiagLog.write("SceneDelegate willConnect urls=\(connectionOptions.urlContexts.count) docBrowser=\(docBrowser)")
 
 		guard let windowScene = scene as? UIWindowScene else { return }
 		let window = UIWindow(windowScene: windowScene)
-		window.rootViewController = UIHostingController(rootView: RootView())
 		self.window = window
+
+		if docBrowser {
+			let browser = UIDocumentBrowserViewController(forOpening: [.item])
+			browser.delegate = self
+			browser.allowsDocumentCreation = false
+			browser.allowsPickingMultipleItems = true
+			browser.shouldShowFileExtensions = true
+			window.rootViewController = browser
+
+			// 立刻用主界面盖住文档浏览器的 UI
+			DispatchQueue.main.async {
+				let host = UIHostingController(rootView: RootView())
+				host.modalPresentationStyle = .fullScreen
+				browser.present(host, animated: false)
+			}
+		} else {
+			window.rootViewController = UIHostingController(rootView: RootView())
+		}
+
 		window.makeKeyAndVisible()
 
 		for context in connectionOptions.urlContexts {
 			DiagLog.write("SceneDelegate cold-start url \(context.url.absoluteString)")
 			URLRouter.shared.handle(context.url)
+		}
+	}
+
+	// MARK: - UIDocumentBrowserViewControllerDelegate
+
+	func documentBrowser(
+		_ controller: UIDocumentBrowserViewController,
+		didPickDocumentsAt documentURLs: [URL]
+	) {
+		DiagLog.write("documentBrowser didPick \(documentURLs.count) url(s)")
+		for url in documentURLs {
+			URLRouter.shared.handle(url)
 		}
 	}
 
