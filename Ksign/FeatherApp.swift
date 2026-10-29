@@ -92,6 +92,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             }
         }
 
+        // 场景健康检查：确认 SwiftUI 的 window 正常建立（黑屏/场景异常时能看出来）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            let windows = scenes.map { $0.windows.count }
+            DiagLog.write("scene check: scenes=\(scenes.count) windows=\(windows)")
+        }
+
         // Documents 根目录兜底：用户把 IPA 直接放进「文件 App → 我的 iPhone → Ksign」也能导入
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             URLRouter.sweepDocuments(reason: "launch")
@@ -136,21 +143,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 
 
-    /// 多场景已关闭，但 SwiftUI + UIApplicationDelegateAdaptor 下仍需要提供
-    /// scene 配置（Info.plist 的 UISceneConfigurations 为空，交给 SwiftUI 生成）。
-    /// 同时接住随场景连接一起到达的 URL —— 这类 URL 不走 onOpenURL。
-    func application(
-        _ application: UIApplication,
-        configurationForConnecting connectingSceneSession: UISceneSession,
-        options: UIScene.ConnectionOptions
-    ) -> UISceneConfiguration {
-        DiagLog.write("configurationForConnecting urlContexts=\(options.urlContexts.count)")
-        if let url = options.urlContexts.first?.url {
-            UserDefaults.standard.set(url.absoluteString, forKey: "diag.lastURL")
-            PendingURLStore.shared.url = url
-        }
-        return UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
-    }
+    // 注意：这里不要实现 application(_:configurationForConnecting:options:)。
+    // SwiftUI 的 App 生命周期需要自己提供带内部 scene delegate 的 UISceneConfiguration；
+    // 我们一旦覆写并返回 name:nil 的配置，场景就没有 delegate，
+    // scene:openURLContexts: 无人接收 —— 表现为「用其他应用打开」时 App 起来了但文件没进来。
+    // URL 由 SwiftUI 的 .onOpenURL 统一处理（含冷启动）。
 
     private func _initializeBuiltInSources() { 
         Storage.shared.addBuiltInSources()
