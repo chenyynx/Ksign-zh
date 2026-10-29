@@ -98,8 +98,29 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         open url: URL,
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]
     ) -> Bool {
+        print("[AppDelegate] application(open:) fired")
         URLRouter.shared.handle(url)
         return true
+    }
+
+    /// Scene 生命周期下，冷启动时 URL 放在 connectionOptions 里，
+    /// SwiftUI 的 .onOpenURL 订阅晚于场景连接时会把它丢掉。
+    /// 这里先接住，等 UI 起来后再投递。
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        if let url = options.urlContexts.first?.url {
+            print("[AppDelegate] scene connecting with url: \(url.absoluteString)")
+            PendingURLStore.shared.url = url
+        }
+
+        let configuration = UISceneConfiguration(
+            name: "Default Configuration",
+            sessionRole: connectingSceneSession.role
+        )
+        return configuration
     }
 
     private func _initializeBuiltInSources() { 
@@ -244,4 +265,25 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         }
     }
 #endif
+}
+
+
+/// 暂存“场景连接阶段”收到的 URL，等界面就绪后再处理
+final class PendingURLStore {
+	static let shared = PendingURLStore()
+	private init() {}
+
+	var url: URL? {
+		didSet { flushIfNeeded() }
+	}
+
+	private func flushIfNeeded() {
+		guard url != nil else { return }
+		DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+			guard let pending = self?.url else { return }
+			self?.url = nil
+			print("[PendingURLStore] flushing \(pending.absoluteString)")
+			URLRouter.shared.handle(pending)
+		}
+	}
 }
