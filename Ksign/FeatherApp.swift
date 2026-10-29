@@ -103,6 +103,23 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
+
+    /// 多场景保持开启：URL 可能随“新场景连接”一起到达，
+    /// 这里先接住再延迟投递。返回配置用 name: nil，沿用 Info.plist 默认配置，
+    /// 不改变场景能力，也不影响 SwiftUI 自己的 delegate。
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        if let url = options.urlContexts.first?.url {
+            print("[AppDelegate] scene connecting with url: \(url.absoluteString)")
+            UserDefaults.standard.set(url.absoluteString, forKey: "diag.lastURL")
+            PendingURLStore.shared.url = url
+        }
+        return UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+    }
+
     private func _initializeBuiltInSources() { 
         Storage.shared.addBuiltInSources()
     }
@@ -245,4 +262,25 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         }
     }
 #endif
+}
+
+
+/// 暂存场景连接阶段收到的 URL，等界面就绪后再处理
+final class PendingURLStore {
+	static let shared = PendingURLStore()
+	private init() {}
+
+	var url: URL? {
+		didSet { flushIfNeeded() }
+	}
+
+	private func flushIfNeeded() {
+		guard url != nil else { return }
+		DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+			guard let pending = self?.url else { return }
+			self?.url = nil
+			print("[PendingURLStore] flushing \(pending.absoluteString)")
+			URLRouter.shared.handle(pending)
+		}
+	}
 }
