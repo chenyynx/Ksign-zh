@@ -226,19 +226,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
     
-    func application(
-        _ application: UIApplication,
-        configurationForConnecting connectingSceneSession: UISceneSession,
-        options: UIScene.ConnectionOptions
-    ) -> UISceneConfiguration {
-        DiagLog.write("configurationForConnecting urlContexts=\(options.urlContexts.count)")
-        let config = UISceneConfiguration(
-            name: "Default Configuration",
-            sessionRole: connectingSceneSession.role
-        )
-        config.delegateClass = KsignSceneDelegate.self
-        return config
-    }
+    // 不实现 configurationForConnecting：全能签也没有。
+    // 一旦实现，返回的 UISceneConfiguration 会盖掉 Info.plist 里的
+    // UISceneDelegateClassName，系统就不会把 openURLContexts 送进来。
 
     func application(
         _ app: UIApplication,
