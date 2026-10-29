@@ -102,7 +102,7 @@
 	<key>UILaunchScreen</key>
 	<false/>
 	<key>UISupportsDocumentBrowser</key>
-	<true/>
+	<false/>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
