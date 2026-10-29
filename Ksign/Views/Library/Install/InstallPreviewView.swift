@@ -99,7 +99,11 @@ struct InstallPreviewView: View {
 	}
 	
 	private func _install() {
-        guard isSharing || app.identifier != Bundle.main.bundleIdentifier! || _installationMethod == 1 else {
+        // 原本禁止"用 Ksign 更新 Ksign 自身"（官方逻辑）。
+        // 但签名工具（全能签等）会强制写 UISupportsDocumentBrowser=true，
+        // 导致「打开方式」永远收不到文件。自签是唯一的出路，故放开此限制。
+        // 风险：安装过程中 App 被替换，若中途失败可能需要重装 —— 概率低，可接受。
+        guard isSharing || app.identifier != Bundle.main.bundleIdentifier! || _installationMethod == 1 || true else {
             UIAlertController.showAlertWithOk(
                 title: .localized("Install"),
                 message: .localized("You cannot update ‘%@‘ with itself, please use an alternative tool to update it.", arguments: Bundle.main.name)
