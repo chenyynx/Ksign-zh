@@ -42,6 +42,7 @@ struct FeatherApp: App {
 				DiagLog.write("scenePhase=\(phase == .active ? "active" : "other")")
 				if phase == .active {
 					URLRouter.importInboxFiles()
+					SharedInbox.mergeExtensionDiagnostics()
 					URLRouter.importSharedInbox()
 				}
 			}
@@ -74,6 +75,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             let list = (try? FileManager.default.contentsOfDirectory(atPath: inbox.path)) ?? []
             DiagLog.write("inbox scan: \(list.count) item(s) \(list)")
             URLRouter.importInboxFiles()
+            SharedInbox.mergeExtensionDiagnostics()
             URLRouter.importSharedInbox()
         }
 

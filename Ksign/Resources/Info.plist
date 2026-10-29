@@ -9,8 +9,8 @@
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>ksign_extension</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<true/>
 			<key>CFBundleTypeName</key>
 			<string>iOS Package Archive</string>
 			<key>CFBundleTypeRole</key>
@@ -20,6 +20,9 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>nya.asami.ipa</string>
+				<string>com.apple.itunes.ipa</string>
+				<string>public.content</string>
+				<string>public.data</string>
 			</array>
 		</dict>
 		<dict>
@@ -34,6 +37,8 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>nya.asami.tipa</string>
+				<string>public.content</string>
+				<string>public.data</string>
 			</array>
 		</dict>
 		<dict>
@@ -48,21 +53,6 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>nya.asami.ksign.cert</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleTypeName</key>
-			<string>iOS Package Archive (system)</string>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>LSHandlerRank</key>
-			<string>Alternate</string>
-			<key>LSItemContentTypes</key>
-			<array>
-				<string>com.apple.itunes.ipa</string>
-				<string>com.apple.itunes.ipa.archive</string>
-				<string>public.content</string>
-				<string>public.data</string>
 			</array>
 		</dict>
 	</array>

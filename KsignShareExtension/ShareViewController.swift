@@ -18,7 +18,9 @@ final class ShareViewController: UIViewController {
 
 		model.openHost = { [weak self] in
 			guard let url = URL(string: "ksign://share-import") else { return }
-			self?.extensionContext?.open(url, completionHandler: nil)
+			self?.extensionContext?.open(url) { success in
+				ShareDebug.log("open ksign://share-import success=\(success)")
+			}
 		}
 
 		model.finish = { [weak self] success in

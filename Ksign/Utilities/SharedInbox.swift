@@ -34,6 +34,15 @@ enum SharedInbox {
 		return url
 	}
 
+	/// 把扩展写的 diag-ext.log 合并进主 App 的 diag.log
+	static func mergeExtensionDiagnostics() {
+		guard let root else { return }
+		let url = root.appendingPathComponent("diag-ext.log")
+		guard let content = try? String(contentsOf: url, encoding: .utf8), !content.isEmpty else { return }
+		DiagLog.write("--- extension log ---\n" + content)
+		try? FileManager.default.removeItem(at: url)
+	}
+
 	/// 把共享目录里的文件逐个交给 handler，并保证在 handler 处理完后删除
 	@discardableResult
 	static func drain(handler: (URL) -> Void) -> Int {
