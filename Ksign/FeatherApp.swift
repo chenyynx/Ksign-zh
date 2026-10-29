@@ -27,6 +27,7 @@ struct RootView: View {
 	let storage = Storage.shared
 
 	@State private var inboxTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+	@State private var showDocBrowserWarning = false
 
 	var body: some View {
 		VStack {
@@ -60,6 +61,18 @@ struct RootView: View {
 		.onAppear {
 			accentColorManager.updateGlobalTintColor()
 			if logsManager.isCapturing { logsManager.startCapture() }
+
+			// 签名工具若把 UISupportsDocumentBrowser 写成 YES，
+			// 系统会按「文档浏览器 App」处理，「打开方式」永远收不到文件。
+			if let flag = Bundle.main.infoDictionary?["UISupportsDocumentBrowser"] as? NSNumber,
+			   flag.boolValue {
+				showDocBrowserWarning = true
+			}
+		}
+		.alert("签名配置异常", isPresented: $showDocBrowserWarning) {
+			Button("知道了", role: .cancel) {}
+		} message: {
+			Text("这个包的 UISupportsDocumentBrowser 被签名工具设成了 YES，会导致「打开方式」收不到文件。请换一个签名工具重签，或在签名选项里关掉「文件共享」。")
 		}
 	}
 
