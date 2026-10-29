@@ -130,6 +130,22 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 
 
+    /// 多场景已关闭，但 SwiftUI + UIApplicationDelegateAdaptor 下仍需要提供
+    /// scene 配置（Info.plist 的 UISceneConfigurations 为空，交给 SwiftUI 生成）。
+    /// 同时接住随场景连接一起到达的 URL —— 这类 URL 不走 onOpenURL。
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        DiagLog.write("configurationForConnecting urlContexts=\(options.urlContexts.count)")
+        if let url = options.urlContexts.first?.url {
+            UserDefaults.standard.set(url.absoluteString, forKey: "diag.lastURL")
+            PendingURLStore.shared.url = url
+        }
+        return UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+    }
+
     private func _initializeBuiltInSources() { 
         Storage.shared.addBuiltInSources()
     }
