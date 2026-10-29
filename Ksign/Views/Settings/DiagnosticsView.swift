@@ -82,7 +82,7 @@ struct DiagnosticsView: View {
 		.refreshable { refresh() }
 	}
 
-	static let buildIdentifier = "doris-zh+scenedelegate-20261029-f"
+	static let buildIdentifier = "doris-zh+uikit-lifecycle-20261029-g"
 
 	static func info(_ key: String) -> String {
 		"\(Bundle.main.infoDictionary?[key] ?? "nil")"

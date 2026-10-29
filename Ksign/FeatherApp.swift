@@ -11,16 +11,9 @@ import Nuke
 import OSLog
 import IDeviceSwift
 
-@main
-struct FeatherApp: App {
-	@UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-
-	var body: some Scene {
-		WindowGroup {
-			RootView()
-		}
-	}
-}
+// 说明：本 App 采用 UIKit 生命周期（@main 在 AppDelegate 上）+ 自定义 SceneDelegate，
+// 与全能签同构。SwiftUI 的 @main App 会强制使用内部 scene delegate，
+// Info.plist 的 UISceneDelegateClassName 会被忽略，导致 scene:openURLContexts: 永远收不到。
 
 /// 根视图：从 FeatherApp.body 抽出来。
 /// 这样做是为了让自定义 SceneDelegate 也能用 UIHostingController 挂载同一棵树
@@ -111,7 +104,8 @@ final class KsignSceneDelegate: UIResponder, UIWindowSceneDelegate {
 	}
 }
 
-class AppDelegate: NSObject, UIApplicationDelegate {
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -171,6 +165,20 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
     
     func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        DiagLog.write("configurationForConnecting urlContexts=\(options.urlContexts.count)")
+        let config = UISceneConfiguration(
+            name: "Default Configuration",
+            sessionRole: connectingSceneSession.role
+        )
+        config.delegateClass = KsignSceneDelegate.self
+        return config
+    }
+
+    func application(
         _ app: UIApplication,
         open url: URL,
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]
@@ -181,13 +189,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
-
-
-    // 注意：这里不要实现 application(_:configurationForConnecting:options:)。
-    // SwiftUI 的 App 生命周期需要自己提供带内部 scene delegate 的 UISceneConfiguration；
-    // 我们一旦覆写并返回 name:nil 的配置，场景就没有 delegate，
-    // scene:openURLContexts: 无人接收 —— 表现为「用其他应用打开」时 App 起来了但文件没进来。
-    // URL 由 SwiftUI 的 .onOpenURL 统一处理（含冷启动）。
 
     private func _initializeBuiltInSources() { 
         Storage.shared.addBuiltInSources()
