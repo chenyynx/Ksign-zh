@@ -73,6 +73,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		for context in connectionOptions.urlContexts {
 			Self.handle(context.url, source: "launchURL")
 		}
+
+		Self.importSharedInbox()
 	}
 
 	func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
@@ -88,6 +90,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		}
 		// 兜底：DocBrowser=NO 的签名环境（或系统复制到 Inbox 的情况）。
 		Self.importInboxFiles(source: "inboxScan")
+		// 分享扩展落进 App Group 的文件。
+		Self.importSharedInbox()
 	}
 
 	// MARK: - Host presentation
@@ -129,6 +133,9 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 					id: "FeatherManualDownload_\(UUID().uuidString)"
 				)
 			}
+
+			// 分享扩展用 ksign://share-import 唤起主 App
+			importSharedInbox()
 			return
 		}
 
@@ -168,6 +175,27 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 					try? FileManager.default.removeItem(at: url)
 				}
 			}
+		}
+	}
+
+	/// 扫描分享扩展写进 App Group 的文件，导入后删除。
+	/// 先把文件移出共享目录再异步导入，避免回前台重复扫描导致重复入库。
+	static func importSharedInbox() {
+		SharedInbox.mergeExtensionDiagnostics()
+
+		let count = SharedInbox.drain { url in
+			let temp = FileManager.default.temporaryDirectory
+				.appendingPathComponent("share-\(UUID().uuidString)-\(url.lastPathComponent)")
+			guard (try? FileManager.default.moveItem(at: url, to: temp)) != nil else {
+				DiagLog.log("shareInbox: move failed \(url.lastPathComponent)")
+				return
+			}
+			DiagLog.log("shareInbox file: \(temp.lastPathComponent)")
+			importFile(temp, source: "shareInbox", deleteAfterSuccess: true)
+		}
+
+		if count > 0 {
+			DiagLog.log("shareInbox: draining \(count) file(s)")
 		}
 	}
 

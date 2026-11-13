@@ -46,6 +46,12 @@ $(SCHEMES): deps
 	mv "$(APP)/$@.app" "$(STAGE)/Payload/$@.app"
 
 	chmod -R 0755 "$(STAGE)/Payload/$@.app"
+	@if [ -d "$(STAGE)/Payload/$@.app/PlugIns" ]; then \
+		for appex in "$(STAGE)/Payload/$@.app/PlugIns/"*.appex; do \
+			echo "codesign $$appex"; \
+			codesign --force --sign - --timestamp=none "$$appex"; \
+		done; \
+	fi
 	codesign --force --sign - --timestamp=none "$(STAGE)/Payload/$@.app"
 
 	cp deps/* "$(STAGE)/Payload/$@.app/" || true
