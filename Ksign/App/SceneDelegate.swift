@@ -42,22 +42,32 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		let window = UIWindow(windowScene: windowScene)
 		self.window = window
 
-		let browser = UIDocumentBrowserViewController(forOpening: Self.documentTypes)
-		browser.delegate = self
-		browser.allowsDocumentCreation = false
-		browser.shouldShowFileExtensions = false
-		self.browser = browser
-
-		window.rootViewController = browser
-		window.makeKeyAndVisible()
-
-		// 立刻用主界面盖住浏览器 UI；browser 仍在 presenting 层级里接收文档投递。
 		let host = UIHostingController(rootView: RootView())
 		host.modalPresentationStyle = .fullScreen
 		host.view.tag = hostViewTag
 		self.host = host
-		DispatchQueue.main.async {
-			Self.presentHostIfNeeded(on: browser, host: host)
+
+		// 按安装包实际值决定接收架构（签名工具可能改写这个键）：
+		// YES → 系统只把文件投递给文档浏览器；NO → 走 openURL / Documents/Inbox。
+		let usesDocumentBrowser = (Bundle.main.object(forInfoDictionaryKey: "UISupportsDocumentBrowser") as? Bool) ?? false
+
+		if usesDocumentBrowser {
+			let browser = UIDocumentBrowserViewController(forOpening: Self.documentTypes)
+			browser.delegate = self
+			browser.allowsDocumentCreation = false
+			browser.shouldShowFileExtensions = false
+			self.browser = browser
+
+			window.rootViewController = browser
+			window.makeKeyAndVisible()
+
+			// 立刻用主界面盖住浏览器 UI；browser 仍在 presenting 层级里接收文档投递。
+			DispatchQueue.main.async {
+				Self.presentHostIfNeeded(on: browser, host: host)
+			}
+		} else {
+			window.rootViewController = host
+			window.makeKeyAndVisible()
 		}
 
 		for context in connectionOptions.urlContexts {
