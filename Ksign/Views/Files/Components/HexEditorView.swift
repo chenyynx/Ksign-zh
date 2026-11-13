@@ -452,11 +452,11 @@ enum HexEditorError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .fileNotFound:
-            return "File not found"
+            return String.localized("File not found")
         case .readError:
-            return "Failed to read file"
+            return String.localized("Failed to read file")
         case .writeError:
-            return "Failed to write file"
+            return String.localized("Failed to write file")
         }
     }
 } 

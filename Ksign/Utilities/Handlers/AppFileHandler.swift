@@ -176,15 +176,15 @@ enum ImportedFileHandlerError: Error, CustomStringConvertible {
 	var description: String {
 		switch self {
 		case .payloadNotFound:
-			return "No Payload folder was found in the archive. The file may be corrupted."
+			return String.localized("No Payload folder was found in the archive. The file may be corrupted.")
 		case .notEnoughDiskSpace(let needed, let available):
 			let neededStr = ByteCountFormatter.string(fromByteCount: needed, countStyle: .file)
 			let availableStr = ByteCountFormatter.string(fromByteCount: available, countStyle: .file)
-			return "Not enough disk space. Needed: \(neededStr), Available: \(availableStr)"
+			return String.localized("Not enough disk space. Needed: %@, Available: %@", arguments: neededStr, availableStr)
 		case .extractionFailed:
-			return "Failed to extract the archive. The file may be corrupted."
+			return String.localized("Failed to extract the archive. The file may be corrupted.")
 		case .zipLibraryNotAvailable:
-			return "Zip library is not available on this platform."
+			return String.localized("Zip library is not available on this platform.")
 		}
 	}
 }

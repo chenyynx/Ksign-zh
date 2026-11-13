@@ -64,10 +64,10 @@ extension AppIconView {
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(iconOption.title)
+                    Text(String.localized(iconOption.title))
                         .font(.headline)
                         .foregroundColor(.primary)
-                    Text(iconOption.subtitle)
+                    Text(String.localized(iconOption.subtitle))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }

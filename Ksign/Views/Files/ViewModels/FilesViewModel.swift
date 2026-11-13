@@ -75,7 +75,7 @@ class FilesViewModel: ObservableObject {
             files = _applySort(to: mapped)
         } catch {
             DispatchQueue.main.async {
-                UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Error loading files: \(error.localizedDescription)"))
+                UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Error loading files: %@", arguments: error.localizedDescription))
             }
         }
     }
@@ -126,7 +126,13 @@ class FilesViewModel: ObservableObject {
             DispatchQueue.main.async {
                 if !errorMessages.isEmpty {
                     let count = errorMessages.count
-                    UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Failed to delete \(count) item\(count == 1 ? "" : "s")"))
+                    UIAlertController.showAlertWithOk(
+                        title: .localized("Error"),
+                        message: .localized(
+                            count == 1 ? "Failed to delete %lld item" : "Failed to delete %lld items",
+                            arguments: count
+                        )
+                    )
                 }
             }
         }
@@ -145,7 +151,7 @@ class FilesViewModel: ObservableObject {
             }
         } catch {
             DispatchQueue.main.async {
-                UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Error creating folder: \(error.localizedDescription)"))
+                UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Error creating folder: %@", arguments: error.localizedDescription))
             }
         }
     }
@@ -165,7 +171,7 @@ class FilesViewModel: ObservableObject {
             }       
         } catch {
             DispatchQueue.main.async {
-                UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Error creating text file: \(error.localizedDescription)"))
+                UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Error creating text file: %@", arguments: error.localizedDescription))
             }
         }
     }
@@ -183,7 +189,7 @@ class FilesViewModel: ObservableObject {
             }
         } catch {
             DispatchQueue.main.async {
-                UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Error renaming file: \(error.localizedDescription)"))
+                UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Error renaming file: %@", arguments: error.localizedDescription))
             }
         }
     }
@@ -263,7 +269,13 @@ class FilesViewModel: ObservableObject {
             
             DispatchQueue.main.async {
                 if failureCount > 0 {
-                    UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Failed to import \(failureCount) file\(failureCount == 1 ? "" : "s")"))
+                    UIAlertController.showAlertWithOk(
+                        title: .localized("Error"),
+                        message: .localized(
+                            failureCount == 1 ? "Failed to import %lld file" : "Failed to import %lld files",
+                            arguments: failureCount
+                        )
+                    )
                 }
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     self.loadFiles()
@@ -340,7 +352,7 @@ class FilesViewModel: ObservableObject {
                     
                 case .failure(let error):
                     NotificationCenter.default.post(name: NSNotification.Name("ExtractionFailed"), object: nil)
-                    UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Error extracting archive: \(error.localizedDescription)"))
+                    UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Error extracting archive: %@", arguments: error.localizedDescription))
                 }
             }
         }
@@ -357,11 +369,11 @@ class FilesViewModel: ObservableObject {
                 case .success(let ipaFileName):
                     NotificationCenter.default.post(name: NSNotification.Name("ExtractionCompleted"), object: nil)
                     self?.loadFiles()
-                    UIAlertController.showAlertWithOk(title: .localized("Success"), message: .localized("Successfully packaged \(file.name) as \(ipaFileName)"))
+                    UIAlertController.showAlertWithOk(title: .localized("Success"), message: .localized("Successfully packaged %@ as %@", arguments: file.name, ipaFileName))
                     
                 case .failure(let error):
                     NotificationCenter.default.post(name: NSNotification.Name("ExtractionFailed"), object: nil)
-                    UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Failed to package IPA: \(error.localizedDescription)"))
+                    UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Failed to package IPA: %@", arguments: error.localizedDescription))
                 }
             }
         }

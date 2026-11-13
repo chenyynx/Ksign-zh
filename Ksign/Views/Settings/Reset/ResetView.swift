@@ -35,7 +35,7 @@ struct ResetView: View {
 		action: @escaping () -> Void
 	) {
 		let action = UIAlertAction(
-			title:  ("Proceed"),
+			title: .localized("Proceed"),
 			style: .destructive
 		) { _ in
 			action()
@@ -48,10 +48,10 @@ struct ResetView: View {
 		
 		var msg = ""
 		if !message.isEmpty { msg = message + "\n" }
-		msg.append( ("This action cannot be undone. Would you like to proceed?"))
-	
+		msg.append(.localized("This action cannot be undone. Would you like to proceed?"))
+
 		UIAlertController.showAlertWithCancel(
-			title: title,
+			title: .localized(title),
 			message: msg,
 			style: style,
 			actions: [action]
@@ -86,7 +86,7 @@ extension ResetView {
 		Section {
 			Button("Reset Sources", systemImage: "xmark.circle") {
 				Self.resetAlert(
-					title: "Reset Signed Apps",
+					title: "Reset Sources",
 					message: Storage.shared.countContent(for: AltSource.self)
 				) {
 					Self.resetSources()

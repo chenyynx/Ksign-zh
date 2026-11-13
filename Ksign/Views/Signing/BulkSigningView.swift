@@ -262,7 +262,7 @@ extension BulkSigningView {
 				certificate: _selectedCert()
 			) { [self] error in
 				if let error {
-					UIAlertController.showAlertWithOk(title: "Error", message: error.localizedDescription)
+					UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
 				}
 				DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
 					NotificationCenter.default.post(name: NSNotification.Name("ksign.bulkSigningFinished"), object: nil)

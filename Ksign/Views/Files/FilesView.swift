@@ -407,9 +407,9 @@ struct FilesView: View {
                 switch result {
                 case .success(let ipaFileName):
                     self.viewModel.loadFiles()
-                    UIAlertController.showAlertWithOk(title: .localized("Success"), message: .localized("Successfully packaged \(file.name) as \(ipaFileName)"))
+                    UIAlertController.showAlertWithOk(title: .localized("Success"), message: .localized("Successfully packaged %@ as %@", arguments: file.name, ipaFileName))
                 case .failure(let error):
-                    UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Failed to package IPA: \(error.localizedDescription)"))
+                    UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Failed to package IPA: %@", arguments: error.localizedDescription))
                 }
                 ExtractManager.shared.finish(item: extractItem)
             }

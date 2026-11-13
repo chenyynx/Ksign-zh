@@ -363,15 +363,15 @@ enum SigningFileHandlerError: Error, LocalizedError {
 	var errorDescription: String? {
 		switch self {
 		case .appNotFound:
-			return "Unable to locate bundle path."
+			return String.localized("Unable to locate bundle path.")
 		case .infoPlistNotFound:
-			return "Unable to locate info.plist path."
+			return String.localized("Unable to locate info.plist path.")
 		case .missingCertifcate:
-			return "No certificate was specified."
+			return String.localized("No certificate was specified.")
 		case .disinjectFailed:
-			return "Removing mach-O load paths failed."
+			return String.localized("Removing mach-O load paths failed.")
 		case .signFailed:
-			return "Signing failed."
+			return String.localized("Signing failed.")
 		}
 	}
 }

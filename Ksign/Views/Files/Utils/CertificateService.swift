@@ -33,21 +33,21 @@ final class CertificateService {
         var errorDescription: String? {
             switch self {
             case .invalidFile:
-                return "Invalid or inaccessible file"
+                return String.localized("Invalid or inaccessible file")
             case .invalidFileFormat:
-                return "Invalid file format"
+                return String.localized("Invalid file format")
             case .missingProvisionData:
-                return "Missing provisioning profile data"
+                return String.localized("Missing provisioning profile data")
             case .missingCertificateData:
-                return "Missing certificate data"
+                return String.localized("Missing certificate data")
             case .invalidPassword:
-                return "Invalid certificate password"
+                return String.localized("Invalid certificate password")
             case .multipleProvisionFiles:
-                return "Multiple .mobileprovision files found. Please import certificate using the Settings > Certificates section."
+                return String.localized("Multiple .mobileprovision files found. Please import certificate using the Settings > Certificates section.")
             case .noProvisionFile:
-                return "No .mobileprovision file found in the same directory"
+                return String.localized("No .mobileprovision file found in the same directory")
             case .importFailed(let message):
-                return "Failed to import certificate: \(message)"
+                return String.localized("Failed to import certificate: %@", arguments: message)
             }
         }
     }

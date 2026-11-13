@@ -245,11 +245,11 @@ enum ExtractionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notAnArchive:
-            return "File is not a supported archive format"
+            return String.localized("File is not a supported archive format")
         case .notAnAppDirectory:
-            return "File is not an .app directory"
+            return String.localized("File is not an .app directory")
         case .extractionFailed(let message):
-            return "Extraction failed: \(message)"
+            return String.localized("Extraction failed: %@", arguments: message)
         }
     }
 } 
