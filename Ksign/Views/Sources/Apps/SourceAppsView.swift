@@ -101,7 +101,7 @@ struct SourceAppsView: View {
                         ContentUnavailableView {
                             Label(.localized("Unable to Load Sources"), systemImage: "exclamationmark.triangle")
                         } description: {
-                            Text(.localized("Added %lld sources, but none loaded. Check your network or verify the source addresses.", arguments: _allSources.count))
+                            Text(verbatim: .localized("Added %lld sources, but none loaded. Check your network or verify the source addresses.", arguments: _allSources.count))
                         } actions: {
                             Button {
                                 Task { await viewModel.fetchSources(_allSources, refresh: true) }
