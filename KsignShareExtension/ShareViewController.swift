@@ -8,6 +8,7 @@
 import UIKit
 import SwiftUI
 import UniformTypeIdentifiers
+import ObjectiveC
 
 final class ShareViewController: UIViewController {
 	private let model = ShareImportModel()
@@ -84,8 +85,13 @@ final class ShareViewController: UIViewController {
 		var responder: UIResponder? = self
 
 		while let current = responder {
-			if current.responds(to: modernSelector) {
-				ShareDebug.log("responder supports modern open (\(type(of: current)))")
+			let className = NSStringFromClass(type(of: current))
+			let isApplication = Self.isUIApplicationClass(type(of: current))
+
+			// UIScene（_UIHostedWindowScene）也实现了同名方法，必须先排除，
+			// 否则打开请求会发给场景对象，什么也不会发生。
+			if isApplication, current.responds(to: modernSelector) {
+				ShareDebug.log("UIApplication supports modern open (\(className))")
 				let implementation = current.method(for: modernSelector)
 				let function = unsafeBitCast(implementation, to: OpenURLWithOptionsFn.self)
 				function(current, modernSelector, url as NSURL, [:] as NSDictionary, nil)
@@ -93,8 +99,8 @@ final class ShareViewController: UIViewController {
 				return
 			}
 
-			if current.responds(to: legacySelector) {
-				ShareDebug.log("responder openURL (legacy) handled by \(type(of: current))")
+			if isApplication, current.responds(to: legacySelector) {
+				ShareDebug.log("UIApplication openURL (legacy) (\(className))")
 				_ = current.perform(legacySelector, with: url)
 				finishAndDismiss()
 				return
@@ -103,7 +109,18 @@ final class ShareViewController: UIViewController {
 			responder = current.next
 		}
 
-		ShareDebug.log("no responder handled openURL")
+		ShareDebug.log("no UIApplication in responder chain")
+	}
+
+	private static func isUIApplicationClass(_ cls: AnyClass) -> Bool {
+		var current: AnyClass? = cls
+		while let candidate = current {
+			if NSStringFromClass(candidate) == "UIApplication" {
+				return true
+			}
+			current = class_getSuperclass(candidate)
+		}
+		return false
 	}
 
 	private func finishAndDismiss() {
