@@ -180,7 +180,11 @@ final class SigningHandler: NSObject {
 
 extension SigningHandler {
 	private func _modifyDict(using infoDictionary: NSMutableDictionary, with options: Options, to app: URL) async throws {
-		if options.fileSharing { infoDictionary.setObject(true, forKey: "UISupportsDocumentBrowser" as NSCopying) }
+		// 注意：这里原本写的是 UISupportsDocumentBrowser，是错的。
+		// 那个键会把目标 App 标记成「文档浏览器」，导致系统在文件 App 的
+		// 「打开方式」里既不投递 URL 也不复制 Documents/Inbox —— 表现为
+		// 「跳转了但没导入」。文件共享对应的是 UIFileSharingEnabled。
+		if options.fileSharing { infoDictionary.setObject(true, forKey: "UIFileSharingEnabled" as NSCopying) }
 		if options.itunesFileSharing { infoDictionary.setObject(true, forKey: "UIFileSharingEnabled" as NSCopying) }
 		if options.proMotion { infoDictionary.setObject(true, forKey: "CADisableMinimumFrameDurationOnPhone" as NSCopying) }
 		if options.gameMode { infoDictionary.setObject(true, forKey: "GCSupportsGameMode" as NSCopying)}
