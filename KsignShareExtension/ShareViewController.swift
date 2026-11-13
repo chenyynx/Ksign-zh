@@ -71,23 +71,23 @@ final class ShareViewController: UIViewController {
 		}
 	}
 
-	/// 分享扩展里 UIApplication.shared 不可用，但响应链上存在 UIApplication 实例。
-	/// 走到它以后调用 open(_:options:)，然后立刻 completeRequest——
-	/// 扩展不结束，系统不会执行跳转（实测：只调 openURL: 不结束扩展，App 不会被拉起）。
+	/// 分享扩展里 UIApplication 类型在编译期不可用，但响应链上存在能处理 openURL: 的实例。
+	/// 动态执行 openURL: 后必须立刻 completeRequest——扩展不结束，系统不会执行跳转。
 	private func openViaResponder(_ url: URL) {
+		let selector = NSSelectorFromString("openURL:")
 		var responder: UIResponder? = self
 
 		while let current = responder {
-			if let application = current as? UIApplication {
-				ShareDebug.log("responder is UIApplication, calling open")
-				application.open(url, options: [:], completionHandler: nil)
+			if current.responds(to: selector) {
+				ShareDebug.log("responder openURL handled by \(type(of: current))")
+				_ = current.perform(selector, with: url)
 				finishAndDismiss()
 				return
 			}
 			responder = current.next
 		}
 
-		ShareDebug.log("no UIApplication in responder chain")
+		ShareDebug.log("no responder handled openURL")
 	}
 
 	private func finishAndDismiss() {
