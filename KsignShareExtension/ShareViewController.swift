@@ -71,19 +71,35 @@ final class ShareViewController: UIViewController {
 		}
 	}
 
-	/// 分享扩展里 UIApplication 类型在编译期不可用，但响应链上存在能处理 openURL: 的实例。
-	/// 动态执行 openURL: 后必须立刻 completeRequest——扩展不结束，系统不会执行跳转。
+	/// 分享扩展里 UIApplication 类型在编译期不可用，但响应链上存在 UIApplication 实例。
+	/// 旧的单参数 openURL: 在扩展里是空操作（实测被调用但不拉起 App），
+	/// 必须调现代接口 openURL:options:completionHandler:，通过 IMP 直接调用。
+	/// 触发后立刻 completeRequest——扩展不结束，系统不会执行跳转。
+	private typealias OpenURLWithOptionsFn = @convention(c) (AnyObject, Selector, NSURL, NSDictionary, AnyObject?) -> Void
+
 	private func openViaResponder(_ url: URL) {
-		let selector = NSSelectorFromString("openURL:")
+		let modernSelector = NSSelectorFromString("openURL:options:completionHandler:")
+		let legacySelector = NSSelectorFromString("openURL:")
+
 		var responder: UIResponder? = self
 
 		while let current = responder {
-			if current.responds(to: selector) {
-				ShareDebug.log("responder openURL handled by \(type(of: current))")
-				_ = current.perform(selector, with: url)
+			if current.responds(to: modernSelector) {
+				ShareDebug.log("responder supports modern open (\(type(of: current)))")
+				let implementation = current.method(for: modernSelector)
+				let function = unsafeBitCast(implementation, to: OpenURLWithOptionsFn.self)
+				function(current, modernSelector, url as NSURL, [:] as NSDictionary, nil)
 				finishAndDismiss()
 				return
 			}
+
+			if current.responds(to: legacySelector) {
+				ShareDebug.log("responder openURL (legacy) handled by \(type(of: current))")
+				_ = current.perform(legacySelector, with: url)
+				finishAndDismiss()
+				return
+			}
+
 			responder = current.next
 		}
 
