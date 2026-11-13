@@ -43,9 +43,12 @@ extension ServerInstaller {
 	}
 	
 	// MARK: Files/IP
-	static let sni: String = {
+	/// 实时计算：切换「Fully Local / Semi Local」后立即生效，不再需要重启 App。
+	/// 之前是 static let，进程内只算一次；切换设置后页面地址和服务端绑定
+	/// hostname 会停留在旧值，表现为 Safari 打开 *.backloop.dev 失败。
+	static var sni: String {
 		let localhost = "127.0.0.1"
-		
+
 		if getServerMethod() == 1 {
 			return !ServerInstaller.getIPFix()
 			? (getLocalAddress() ?? localhost)
@@ -53,7 +56,7 @@ extension ServerInstaller {
 		} else {
 			return readCommonName() ?? localhost
 		}
-	}()
+	}
 	
 	static func tls() throws -> TLSConfiguration? {
 		guard
