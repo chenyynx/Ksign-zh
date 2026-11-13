@@ -2,33 +2,20 @@
 //  SceneDelegate.swift
 //  Ksign
 //
-//  文档投递入口：安装包被第三方签名工具强制写成 UISupportsDocumentBrowser=YES 时，
-//  iOS 不会走 openURL、也不会复制 Documents/Inbox，而是把文件交给
-//  UIDocumentBrowserViewController。因此 window 根控制器必须是文档浏览器，
-//  主界面以覆盖层形式呈现，浏览器留在层级里接收投递。
+//  文件接收入口：主界面直接作 window 根控制器。
+//  文件来源有三条：分享扩展（App Group）、openURL（分享/打开方式）、
+//  Documents/Inbox 扫描。曾经用 UIDocumentBrowserViewController 作根来接收
+//  「打开方式」投递，但系统从未回调且启动会闪它的「最近项目」页面，已移除。
 //
 
 import UIKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 	var window: UIWindow?
 
-	private var browser: UIDocumentBrowserViewController?
-	private var host: UIHostingController<RootView>?
-	private let hostViewTag = 0x4B534947 // "KSIG"
-
 	/// 已尝试导入过的 Inbox 文件，避免失败文件每次回前台都重复弹窗。
 	private static var attemptedInboxFiles: Set<String> = []
-
-	/// 与 Info.plist 里 UTExportedTypeDeclarations 声明的 UTI 保持一致。
-	static var documentTypes: [UTType] {
-		var types: [UTType] = []
-		if let ipa = UTType("nya.asami.ipa") { types.append(ipa) }
-		if let tipa = UTType("nya.asami.tipa") { types.append(tipa) }
-		return types.isEmpty ? [.data] : types
-	}
 
 	// MARK: - Scene lifecycle
 
@@ -43,32 +30,13 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		self.window = window
 
 		let host = UIHostingController(rootView: RootView())
-		host.modalPresentationStyle = .fullScreen
-		host.view.tag = hostViewTag
-		self.host = host
 
-		// 按安装包实际值决定接收架构（签名工具可能改写这个键）：
-		// YES → 系统只把文件投递给文档浏览器；NO → 走 openURL / Documents/Inbox。
-		let usesDocumentBrowser = (Bundle.main.object(forInfoDictionaryKey: "UISupportsDocumentBrowser") as? Bool) ?? false
-
-		if usesDocumentBrowser {
-			let browser = UIDocumentBrowserViewController(forOpening: Self.documentTypes)
-			browser.delegate = self
-			browser.allowsDocumentCreation = false
-			browser.shouldShowFileExtensions = false
-			self.browser = browser
-
-			window.rootViewController = browser
-			window.makeKeyAndVisible()
-
-			// 立刻用主界面盖住浏览器 UI；browser 仍在 presenting 层级里接收文档投递。
-			DispatchQueue.main.async {
-				Self.presentHostIfNeeded(on: browser, host: host)
-			}
-		} else {
-			window.rootViewController = host
-			window.makeKeyAndVisible()
-		}
+		// 主界面直接作根控制器。
+		// 注：曾经用 UIDocumentBrowserViewController 作根来接收「打开方式」投递，
+		// 但系统从未回调（documents 全来自分享扩展），而且启动时会闪一下它的
+		// 「最近项目」页面，已经移除。文件接收走分享扩展 + openURL + Inbox 扫描。
+		window.rootViewController = host
+		window.makeKeyAndVisible()
 
 		for context in connectionOptions.urlContexts {
 			Self.handle(context.url, source: "launchURL")
@@ -84,34 +52,10 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 	}
 
 	func sceneDidBecomeActive(_ scene: UIScene) {
-		// 首次 present 若因时序失败，回前台时补一次。
-		if let browser, let host {
-			Self.presentHostIfNeeded(on: browser, host: host)
-		}
-		// 兜底：DocBrowser=NO 的签名环境（或系统复制到 Inbox 的情况）。
+		// 兜底：系统把文件复制到 Documents/Inbox 的情况。
 		Self.importInboxFiles(source: "inboxScan")
 		// 分享扩展落进 App Group 的文件。
 		Self.importSharedInbox()
-	}
-
-	// MARK: - Host presentation
-
-	private static func presentHostIfNeeded(
-		on browser: UIDocumentBrowserViewController,
-		host: UIHostingController<RootView>,
-		attempt: Int = 0
-	) {
-		guard browser.presentedViewController == nil else { return }
-
-		// 浏览器可能还没挂到 window 上，过早 present 会丢；短暂重试。
-		if browser.view.window == nil, attempt < 20 {
-			DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-				presentHostIfNeeded(on: browser, host: host, attempt: attempt + 1)
-			}
-			return
-		}
-
-		browser.present(host, animated: false)
 	}
 
 	// MARK: - URL / file handling
@@ -229,24 +173,3 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 	}
 }
 
-// MARK: - UIDocumentBrowserViewControllerDelegate
-
-extension SceneDelegate: UIDocumentBrowserViewControllerDelegate {
-	func documentBrowser(
-		_ controller: UIDocumentBrowserViewController,
-		didPickDocumentsAt documentURLs: [URL]
-	) {
-		DiagLog.log("documentBrowser didPickDocumentsAt: \(documentURLs.map(\.lastPathComponent))")
-		for url in documentURLs {
-			Self.handle(url, source: "documentBrowser")
-		}
-	}
-
-	func documentBrowser(
-		_ controller: UIDocumentBrowserViewController,
-		didRequestDocumentCreationWithHandler importHandler: @escaping (URL?, UIDocumentBrowserViewController.ImportMode) -> Void
-	) {
-		// Ksign 不创建文档，只接收外部投递。
-		importHandler(nil, .none)
-	}
-}
