@@ -16178,6 +16178,61 @@
           }
         }
       }
+    },
+    "No App Sources Yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有添加任何软件源"
+          }
+        }
+      }
+    },
+    "Add an AltStore source address to browse apps here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加一个 AltStore 源地址即可在这里浏览应用。"
+          }
+        }
+      }
+    },
+    "Unable to Load Sources": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法加载软件源"
+          }
+        }
+      }
+    },
+    "Added %lld sources, but none loaded. Check your network or verify the source addresses.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已添加 %lld 个源，但一个都没有加载成功。请检查网络，或进入软件源页面确认地址是否有效。"
+          }
+        }
+      }
+    },
+    "Unable to load sources, check your network": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法加载软件源，请检查网络"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

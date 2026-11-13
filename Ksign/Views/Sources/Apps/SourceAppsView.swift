@@ -35,9 +35,7 @@ struct SourceAppsView: View {
     @State private var _sortOption: SortOption = .default
     @State private var _selectedRoute: SourceAppRoute?
     
-    @State var isLoading = true
     @State var hasLoadedOnce = false
-    @State private var hasFinishedLoading = false
     @State private var _isAddingSourcePresenting = false
     @State private var _searchText = ""
     var fromAppStore: Bool = false
@@ -78,44 +76,48 @@ struct SourceAppsView: View {
                 )
                 .ignoresSafeArea()
             } else {
-                // 区分「加载中 / 没有源 / 加载失败」，不再用同一个转圈糊住三种情况
+                // 四态：首次拉取中 / 没有源 / 拉取失败 / 其余
+                // 只有「已经完成过一轮拉取」且结果为空时才判定失败，
+                // 避免冷启动时把「还没开始拉」误报成「一个都没加载成功」。
+                let isLoadingSources = !viewModel.hasFetchedOnce || !viewModel.isFinished
+
                 if #available(iOS 17.0, *) {
-                if isLoading && !hasFinishedLoading {
-                    ProgressView()
-                } else if _allSources.isEmpty {
-                    ContentUnavailableView {
-                        Label(.localized("No Sources"), systemImage: "tray")
-                    } description: {
-                        Text("还没有添加任何软件源。添加一个 AltStore 源地址即可在这里浏览应用。")
-                    } actions: {
-                        Button {
-                            _isAddingSourcePresenting = true
-                        } label: {
-                            Label("添加软件源", systemImage: "plus")
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                } else {
-                    ContentUnavailableView {
-                        Label("无法加载软件源", systemImage: "exclamationmark.triangle")
-                    } description: {
-                        Text("已添加 \(_allSources.count) 个源，但一个都没有加载成功。请检查网络，或进入软件源页面确认地址是否有效。")
-                    } actions: {
-                        Button {
-                            Task { await viewModel.fetchSources(_allSources, refresh: true) }
-                        } label: {
-                            Label(.localized("Reset"), systemImage: "arrow.clockwise")
-                        }
-                    }
-                }
-                } else {
-                    if isLoading && !hasFinishedLoading {
+                    if isLoadingSources {
                         ProgressView()
                     } else if _allSources.isEmpty {
-                        Text("还没有添加任何软件源")
+                        ContentUnavailableView {
+                            Label(.localized("No App Sources Yet"), systemImage: "tray")
+                        } description: {
+                            Text(.localized("Add an AltStore source address to browse apps here."))
+                        } actions: {
+                            Button {
+                                _isAddingSourcePresenting = true
+                            } label: {
+                                Label(.localized("Add Source"), systemImage: "plus")
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    } else {
+                        ContentUnavailableView {
+                            Label(.localized("Unable to Load Sources"), systemImage: "exclamationmark.triangle")
+                        } description: {
+                            Text(.localized("Added %lld sources, but none loaded. Check your network or verify the source addresses.", arguments: _allSources.count))
+                        } actions: {
+                            Button {
+                                Task { await viewModel.fetchSources(_allSources, refresh: true) }
+                            } label: {
+                                Label(.localized("Reset"), systemImage: "arrow.clockwise")
+                            }
+                        }
+                    }
+                } else {
+                    if isLoadingSources {
+                        ProgressView()
+                    } else if _allSources.isEmpty {
+                        Text(.localized("No App Sources Yet"))
                             .foregroundColor(.secondary)
                     } else {
-                        Text("无法加载软件源，请检查网络")
+                        Text(.localized("Unable to load sources, check your network"))
                             .foregroundColor(.secondary)
                     }
                 }
@@ -180,7 +182,8 @@ struct SourceAppsView: View {
             }
         }
         .onAppear {
-            if !hasLoadedOnce, viewModel.isFinished {
+            // 只有「已经拉过一轮」才允许用空数据做判定，避免冷启动误报失败
+            if !hasLoadedOnce, viewModel.hasFetchedOnce, viewModel.isFinished {
                 _load()
                 hasLoadedOnce = true
             }
@@ -188,6 +191,12 @@ struct SourceAppsView: View {
         }
         .onChange(of: viewModel.isFinished) { _ in
             _load()
+        }
+        .onChange(of: viewModel.hasFetchedOnce) { fetched in
+            if fetched {
+                _load()
+                hasLoadedOnce = true
+            }
         }
         .sheet(isPresented: $_isAddingSourcePresenting) {
             SourcesAddView()
@@ -202,15 +211,9 @@ struct SourceAppsView: View {
     }
     
     private func _load() {
-        isLoading = true
-        
-        Task {
-            let loadedSources = object.compactMap { viewModel.sources[$0] }
+        let loadedSources = object.compactMap { viewModel.sources[$0] }
+        withAnimation(.easeIn(duration: 0.2)) {
             _sources = loadedSources
-            hasFinishedLoading = true
-            withAnimation(.easeIn(duration: 0.2)) {
-                isLoading = false
-            }
         }
     }
     
