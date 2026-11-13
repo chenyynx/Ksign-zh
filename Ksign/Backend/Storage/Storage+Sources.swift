@@ -92,7 +92,10 @@ extension Storage {
 	}
 
 
-	func addBuiltInSources() {
+	/// 写入内置源，全部结束后回报成功写入的数量。
+	/// 调用方（AppDelegate）只在 successCount > 0 时记录初始化完成，
+	/// 否则下次启动继续重试——离线首次启动不会把「已初始化」永久置上。
+	func addBuiltInSources(completion: ((Int) -> Void)? = nil) {
 		let builtInSourceURLs = [
             "https://raw.githubusercontent.com/Nyasami/Ksign/refs/heads/main/repo.json",
             "https://decrypt.stream/feather.json",
@@ -100,9 +103,23 @@ extension Storage {
             "https://github.com/LiveContainer/LiveContainer/releases/download/1.0/apps.json",
             "https://alt.crystall1ne.dev"
 		]
-		
+
+		let group = DispatchGroup()
+		let counterQueue = DispatchQueue(label: "ksign.builtInSources.counter")
+		var successCount = 0
+
 		for urlString in builtInSourceURLs {
-			FR.handleSource(urlString) { }
+			group.enter()
+			FR.handleSource(urlString, isBuiltIn: true, silent: true) { success in
+				if success {
+					counterQueue.sync { successCount += 1 }
+				}
+				group.leave()
+			}
+		}
+
+		group.notify(queue: .main) {
+			completion?(counterQueue.sync { successCount })
 		}
 	}
 

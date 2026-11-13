@@ -47,7 +47,7 @@ struct FeatherApp: App {
 	private func _handleURL(_ url: URL) {
 		if url.scheme == "ksign" {
 			if let fullPath = url.validatedScheme(after: "/source/") {
-				FR.handleSource(fullPath) { }
+				FR.handleSource(fullPath) { _ in }
 			}
 			
 			if
@@ -96,10 +96,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         
         _createPipeline()
         _createSourcesDirectory()
-        // v2：老版本升级后也补写一次内置源（handleSource 会按 identifier 去重，不会重复添加）
-        if !UserDefaults.standard.bool(forKey: "hasInitializedBuiltInSources.v2") {
+        // v2：首次安装、老版本升级、或源列表被清空时补写内置源
+        // （handleSource 会按 identifier 去重，不会重复添加）。
+        // 「已初始化」只在成功写入至少一个源后置位，见 _initializeBuiltInSources。
+        if !UserDefaults.standard.bool(forKey: "hasInitializedBuiltInSources.v2")
+            || Storage.shared.getSources().isEmpty {
             _initializeBuiltInSources()
-            UserDefaults.standard.set(true, forKey: "hasInitializedBuiltInSources.v2")
         }
         
         _clean()
@@ -114,8 +116,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
     
-    private func _initializeBuiltInSources() { 
-        Storage.shared.addBuiltInSources()
+    private func _initializeBuiltInSources() {
+        Storage.shared.addBuiltInSources { successCount in
+            // 全部失败（离线首启）不置标记，下次启动继续重试；
+            // 列表为空也会在下次启动再次进入本流程。
+            if successCount > 0 {
+                UserDefaults.standard.set(true, forKey: "hasInitializedBuiltInSources.v2")
+            }
+        }
     }
     
     private func _createPipeline() {

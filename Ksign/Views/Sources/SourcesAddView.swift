@@ -63,8 +63,9 @@ struct SourcesAddView: View {
 						placement: .confirmationAction,
 						isDisabled: _sourceURL.isEmpty
 					) {
-						FR.handleSource(_sourceURL) {
-							dismiss()
+						FR.handleSource(_sourceURL) { success in
+							// 失败时保留表单并显示错误，便于改地址重试
+							if success { dismiss() }
 						}
 					}
 				} else {

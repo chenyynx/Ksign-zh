@@ -189,30 +189,44 @@ enum FR {
 	}
 	#endif
 	
+	/// 拉取并写入一个软件源。
+	/// - Parameters:
+	///   - isBuiltIn: 标记为内置源（写入 Core Data 的 isBuiltIn 字段）。
+	///   - silent: 不弹错误框。内置源在启动时静默拉取，失败由调用方安排下次重试，
+	///     避免离线启动连续弹 5 个错误框。
+	///   - completion: 目标状态是否达成。源已存在也算成功（取消/去重不丢重试机会）。
 	static func handleSource(
 		_ urlString: String,
-		competion: @escaping () -> Void
+		isBuiltIn: Bool = false,
+		silent: Bool = false,
+		completion: @escaping (Bool) -> Void
 	) {
-		guard let url = URL(string: urlString) else { return }
-		
+		guard let url = URL(string: urlString) else { completion(false); return }
+
 		NBFetchService().fetch<ASRepository>(from: url) { (result: Result<ASRepository, Error>) in
 			switch result {
 			case .success(let data):
 				let id = data.id ?? url.absoluteString
-				
+
 				if !Storage.shared.sourceExists(id) {
-					Storage.shared.addSource(url, repository: data, id: id) { _ in
-						competion()
+					Storage.shared.addSource(url, repository: data, id: id, isBuiltIn: isBuiltIn) { error in
+						completion(error == nil)
 					}
 				} else {
-					DispatchQueue.main.async {
-						UIAlertController.showAlertWithOk(title: "Error", message: "Repository already added.")
+					if !silent {
+						DispatchQueue.main.async {
+							UIAlertController.showAlertWithOk(title: .localized("Error"), message: .localized("Repository already added."))
+						}
 					}
+					completion(true)
 				}
 			case .failure(let error):
-				DispatchQueue.main.async {
-					UIAlertController.showAlertWithOk(title: "Error", message: error.localizedDescription)
+				if !silent {
+					DispatchQueue.main.async {
+						UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
+					}
 				}
+				completion(false)
 			}
 		}
 	}
