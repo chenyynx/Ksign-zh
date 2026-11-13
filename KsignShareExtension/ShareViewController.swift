@@ -55,33 +55,43 @@ final class ShareViewController: UIViewController {
 	/// 失败后走响应链的 openURL:（仅自签自用，App Store 不允许）。
 	private func openHostApp(_ url: URL) {
 		guard let context = extensionContext else {
-			Self.performResponderOpen(url, from: self)
+			openViaResponder(url)
 			return
 		}
 
 		context.open(url) { success in
 			ShareDebug.log("extensionContext.open success=\(success)")
-			guard !success else { return }
 			DispatchQueue.main.async {
-				Self.performResponderOpen(url, from: self)
+				if success {
+					self.finishAndDismiss()
+				} else {
+					self.openViaResponder(url)
+				}
 			}
 		}
 	}
 
-	private static func performResponderOpen(_ url: URL, from viewController: UIViewController) {
-		let selector = NSSelectorFromString("openURL:")
-		var responder: UIResponder? = viewController
+	/// 分享扩展里 UIApplication.shared 不可用，但响应链上存在 UIApplication 实例。
+	/// 走到它以后调用 open(_:options:)，然后立刻 completeRequest——
+	/// 扩展不结束，系统不会执行跳转（实测：只调 openURL: 不结束扩展，App 不会被拉起）。
+	private func openViaResponder(_ url: URL) {
+		var responder: UIResponder? = self
 
 		while let current = responder {
-			if current.responds(to: selector) {
-				ShareDebug.log("responder openURL handled by \(type(of: current))")
-				_ = current.perform(selector, with: url)
+			if let application = current as? UIApplication {
+				ShareDebug.log("responder is UIApplication, calling open")
+				application.open(url, options: [:], completionHandler: nil)
+				finishAndDismiss()
 				return
 			}
 			responder = current.next
 		}
 
-		ShareDebug.log("no responder handled openURL")
+		ShareDebug.log("no UIApplication in responder chain")
+	}
+
+	private func finishAndDismiss() {
+		extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
 	}
 
 	private func loadInputFiles() {
