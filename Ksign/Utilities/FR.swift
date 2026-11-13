@@ -13,21 +13,33 @@ import AltSourceKit
 import IDeviceSwift
 
 enum FR {
+	/// 导入 IPA。`progress` 按阶段回报 0…1（复制 0.25 / 解压 0.75 / 移动 0.9 / 入库 1.0），
+	/// 供上层复用 ExtractManager 的进度横幅。
 	static func handlePackageFile(
 		_ ipa: URL,
 		download: Download? = nil,
+		progress: ((Double) -> Void)? = nil,
 		completion: @escaping (Error?) -> Void
 	) {
 		Task.detached {
 			let handler = AppFileHandler(file: ipa, download: download)
-			
+
+			func report(_ value: Double) async {
+				guard let progress else { return }
+				await MainActor.run { progress(value) }
+			}
+
 			do {
 				try await handler.copy()
+				await report(0.25)
 				try await handler.extract()
+				await report(0.75)
 				try await handler.move()
+				await report(0.9)
 				try await handler.addToDatabase()
-                
+
                                 try? await handler.clean()
+				await report(1.0)
 				await MainActor.run {
 					completion(nil)
 				}

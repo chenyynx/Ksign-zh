@@ -158,9 +158,22 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 	static func importFile(_ url: URL, source: String, deleteAfterSuccess: Bool = false) {
 		let didStart = url.startAccessingSecurityScopedResource()
 
-		FR.handlePackageFile(url) { error in
+		// 复用文件页那套顶部进度横幅（ExtractManager + ExtractHeaderView）
+		let item = ExtractManager.shared.start(fileName: url.lastPathComponent)
+		let startedAt = Date()
+
+		FR.handlePackageFile(url, progress: { value in
+			ExtractManager.shared.updateProgress(for: item, progress: value)
+		}) { error in
 			if didStart {
 				url.stopAccessingSecurityScopedResource()
+			}
+
+			// 导入通常 1 秒内完成，最小展示 0.6 秒，避免进度条一闪而过
+			let elapsed = Date().timeIntervalSince(startedAt)
+			let delay = max(0, 0.6 - elapsed)
+			DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+				ExtractManager.shared.finish(item: item)
 			}
 
 			if let error {
