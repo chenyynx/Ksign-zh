@@ -46,7 +46,7 @@ struct CertificatesView: View {
             if certificates.isEmpty {
                 if #available(iOS 17, *) {
                     ContentUnavailableView {
-                        Label(.localized("No Certificates"), systemImage: "questionmark.folder.fill")
+                        Label(.localized("No Certificates"), systemImage: "checkmark.seal")
                     } description: {
                         Text(.localized("Get started signing by importing your first certificate."))
                     } actions: {

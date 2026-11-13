@@ -211,7 +211,7 @@ struct FilesView: View {
             if filteredFiles.isEmpty {
                 if #available(iOS 17, *) {
                     ContentUnavailableView {
-                        Label(.localized("No Files"), systemImage: "folder.fill.badge.questionmark")
+                        Label(.localized("No Files"), systemImage: "folder")
                     } description: {
                         Text(.localized("Get started by importing your first file."))
                     } actions: {

@@ -119,7 +119,7 @@ struct LibraryView: View {
                 {
                     if #available(iOS 17, *) {
                         ContentUnavailableView {
-                            Label(.localized("No Apps"), systemImage: "questionmark.app.fill")
+                            Label(.localized("No Apps"), systemImage: "shippingbox.fill")
                         } description: {
                             Text(.localized("Get started by importing your first IPA file."))
                         } actions: {

@@ -57,7 +57,7 @@ struct SigningTweaksView: View {
 			if options.injectionFiles.isEmpty && _tweaksInDirectory.isEmpty {
 				if #available(iOS 17, *) {
 					ContentUnavailableView {
-						Label(.localized("No Tweaks"), systemImage: "gear.badge.questionmark")
+						Label(.localized("No Tweaks"), systemImage: "puzzlepiece.extension")
 					} description: {
 						Text(.localized("Importing your .dylib, .deb or .framework files \n These will also be automatically added to Tweaks folder"))
                     } actions: {
