@@ -54,9 +54,10 @@ enum TabEnum: String, CaseIterable, Hashable {
 	}
 	
 	static var defaultTabs: [TabEnum] {
+		// 第一项即启动默认页：资料库。
 		return [
-            .files,
             .library,
+            .files,
             .appstore,
             .downloader,
 			.settings,
