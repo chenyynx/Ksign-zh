@@ -599,9 +599,11 @@ private extension StorageView {
 		for kind in kinds {
 			switch kind {
 			case .unsigned:
-				ResetView.deleteImportedApps()
+				deleteAllApps(signed: false)
+				removeContents(of: fileManager.unsigned)
 			case .signed:
-				ResetView.deleteSignedApps()
+				deleteAllApps(signed: true)
+				removeContents(of: fileManager.signed)
 			case .archives:
 				removeContents(of: fileManager.archives)
 			case .downloads:
@@ -628,6 +630,26 @@ private extension StorageView {
 		DiagLog.log("storage: cleared \(kinds.map(\.rawValue).joined(separator: ",")), freed≈\(freed)")
 		lastFreed = freed
 		refresh()
+	}
+
+	/// 逐条走 CoreData 删除（不用 NSBatchDelete），资源库的 FetchRequest 才能立刻刷新。
+	func deleteAllApps(signed: Bool) {
+		let storage = Storage.shared
+		let context = storage.context
+		if signed {
+			let apps = (try? context.fetch(Signed.fetchRequest())) ?? []
+			for app in apps {
+				storage.deleteApp(for: app)
+			}
+		} else {
+			let apps = (try? context.fetch(Imported.fetchRequest())) ?? []
+			for app in apps {
+				storage.deleteApp(for: app)
+			}
+		}
+		if context.hasChanges {
+			try? context.save()
+		}
 	}
 
 	func recreateAppDirectories() {
