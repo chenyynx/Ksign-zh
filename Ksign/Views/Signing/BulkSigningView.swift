@@ -27,6 +27,42 @@ struct BulkSigningView: View {
 		guard certificates.indices.contains(_temporaryCertificate) else { return nil }
 		return certificates[_temporaryCertificate]
 	}
+
+	private func _getCertAppID() -> String? {
+		guard
+			let cert = _selectedCert(),
+			let decoded = Storage.shared.getProvisionFileDecoded(for: cert),
+			let entitlements = decoded.Entitlements,
+			let appID = entitlements["application-identifier"]?.value as? String
+		else {
+			return nil
+		}
+		return appID.split(separator: ".").dropFirst().joined(separator: ".")
+	}
+
+	/// 逐个应用按「标识符来源」决定最终值；未指定时跟随全局开关。
+	private func _applyAutomaticIdentifier() {
+		let certAppID = _getCertAppID()
+		for index in _configs.indices {
+			let original = _configs[index].app.identifier
+			switch _configs[index].options.identifierSource {
+			case .some("certificate"):
+				if let certAppID {
+					_configs[index].options.appIdentifier = certAppID
+				}
+			case .some("original"):
+				if let original {
+					_configs[index].options.appIdentifier = original
+				}
+			case .some("custom"):
+				break
+			default:
+				if _configs[index].options.matchCertificateAppID == true, let certAppID {
+					_configs[index].options.appIdentifier = certAppID
+				}
+			}
+		}
+	}
 	
 	@StateObject private var _optionsManager = OptionsManager.shared
 	@State private var _configs: [AppSignConfig]
@@ -117,6 +153,12 @@ struct BulkSigningView: View {
 					}
 				}
 			}
+			.onAppear {
+				_applyAutomaticIdentifier()
+			}
+			.onChange(of: _temporaryCertificate) { _ in
+				_applyAutomaticIdentifier()
+			}
 			.disabled(_isSigning)
 			.animation(.smooth, value: _isSigning)
 		}
@@ -160,7 +202,10 @@ extension BulkSigningView {
 				SigningPropertiesView(
 					title: .localized("Identifier"),
 					initialValue: config.options.appIdentifier.wrappedValue ?? (config.app.wrappedValue.identifier ?? ""),
-					bindingValue: config.options.appIdentifier
+					certAppId: _getCertAppID(),
+					originalAppId: config.app.wrappedValue.identifier,
+					bindingValue: config.options.appIdentifier,
+					source: config.options.identifierSource
 				)
 			}
 			_infoCell(.localized("Version"), desc: config.options.appVersion.wrappedValue ?? config.app.wrappedValue.version) {
@@ -253,7 +298,8 @@ extension BulkSigningView {
 		generator.impactOccurred()
 		_isSigning = true
 
-		
+		_applyAutomaticIdentifier()
+
 		for config in _configs {
 			FR.signPackageFile(
 				config.app,

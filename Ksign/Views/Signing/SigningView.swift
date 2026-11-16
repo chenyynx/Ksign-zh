@@ -51,7 +51,31 @@ struct SigningView: View {
 		}
 		return appID.split(separator: ".").dropFirst().joined(separator: ".")
 	}
-	
+
+	/// 按「标识符来源」决定最终标识符：
+	/// - certificate：证书里的 App ID
+	/// - original：IPA 原始 ID
+	/// - custom：保留用户手动输入
+	/// - 未指定：跟随全局「匹配证书中的 App ID」开关
+	private func _applyAutomaticIdentifier() {
+		switch _temporaryOptions.identifierSource {
+		case .some("certificate"):
+			if let certAppID = _getCertAppID() {
+				_temporaryOptions.appIdentifier = certAppID
+			}
+		case .some("original"):
+			if let original = app.identifier {
+				_temporaryOptions.appIdentifier = original
+			}
+		case .some("custom"):
+			break
+		default:
+			guard _temporaryOptions.matchCertificateAppID == true,
+				  let certAppID = _getCertAppID() else { return }
+			_temporaryOptions.appIdentifier = certAppID
+		}
+	}
+
 	var app: AppInfoPresentable
 	
 	init(app: AppInfoPresentable, signAndInstall: Bool = false) {
@@ -170,6 +194,17 @@ struct SigningView: View {
 				
 				_temporaryOptions.appName = name
 			}
+
+			_applyAutomaticIdentifier()
+		}
+		.onChange(of: _temporaryCertificate) { _ in
+			_applyAutomaticIdentifier()
+		}
+		.onChange(of: _temporaryOptions.matchCertificateAppID) { _ in
+			_applyAutomaticIdentifier()
+		}
+		.onChange(of: _temporaryOptions.identifierSource) { _ in
+			_applyAutomaticIdentifier()
 		}
     }
 }
@@ -204,7 +239,9 @@ extension SigningView {
 					title: .localized("Identifier"),
 					initialValue: _temporaryOptions.appIdentifier ?? (app.identifier ?? ""),
 					certAppId: _getCertAppID(),
-					bindingValue: $_temporaryOptions.appIdentifier
+					originalAppId: app.identifier,
+					bindingValue: $_temporaryOptions.appIdentifier,
+					source: $_temporaryOptions.identifierSource
 				)
 			}
 			_infoCell(.localized("Version"), desc: _temporaryOptions.appVersion ?? app.version) {
@@ -304,6 +341,8 @@ extension SigningView {
 #if DEBUG
 		LogsManager.shared.startCapture()
 #endif
+		// 最终兜底：即使用户中途改过标识符，开启该选项时也以证书 App ID 为准。
+		_applyAutomaticIdentifier()
 		FR.signPackageFile(
 			app,
 			using: _temporaryOptions,

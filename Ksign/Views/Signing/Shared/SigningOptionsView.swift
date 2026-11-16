@@ -143,6 +143,19 @@ struct SigningOptionsView: View {
             Text(.localized("This will force the app to use localizations"))
         }
         
+        NBSection("标识符") {
+            _toggle(
+                "匹配证书中的 App ID",
+                systemImage: "person.text.rectangle",
+                isOn: Binding(
+                    get: { options.matchCertificateAppID ?? false },
+                    set: { options.matchCertificateAppID = $0 }
+                )
+            )
+        } footer: {
+            Text("开启后，每次签名都会自动把「标识符」改成当前证书里的 App ID（等同在「标识符」页面点一次「匹配证书中的 App ID」），不用每次手动点。")
+        }
+
         NBSection(.localized("Advanced")) {
             _toggle(.localized("Adhoc Signing"),
                     systemImage: "signature",

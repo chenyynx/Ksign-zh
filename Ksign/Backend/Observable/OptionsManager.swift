@@ -123,6 +123,10 @@ struct Options: Codable, Equatable {
 	var injectPath: InjectPath
 	/// Inject folder (i.e. `Frameworks/`)
 	var injectFolder: InjectFolder
+	/// 签名时自动把标识符匹配为证书里的 App ID（等同每次手动点一次「匹配证书中的 App ID」）
+	var matchCertificateAppID: Bool? = nil
+	/// 标识符来源：nil=跟随全局设置，"certificate"=证书 App ID，"original"=IPA 原始 ID，"custom"=手动输入
+	var identifierSource: String? = nil
 	// default
 	static let defaultOptions = Options(
 		appAppearance: "Default",
