@@ -41,6 +41,8 @@ enum FR {
                                 try? await handler.clean()
 				await report(1.0)
 				await MainActor.run {
+					// 导入完成后检查存储上限。
+					StorageJanitor.enforceIfNeeded()
 					completion(nil)
 				}
 			} catch {
@@ -70,8 +72,10 @@ enum FR {
 				try await handler.copy()
 				try await handler.modify()
                 try? await handler.clean()
-				
+
 				await MainActor.run {
+					// 签名完成后检查存储上限。
+					StorageJanitor.enforceIfNeeded()
 					completion(nil)
 				}
 			} catch {

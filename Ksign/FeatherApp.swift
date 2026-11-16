@@ -65,6 +65,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		}
 
 		_clean()
+		// 冷启动后按「存储上限」检查一次；超过上限时从最旧、最没用的开始清。
+		StorageJanitor.enforceIfNeeded()
 
 		_copyServerCertificates()
 		_addDefaultCertificates()

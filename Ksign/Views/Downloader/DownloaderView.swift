@@ -96,6 +96,9 @@ struct DownloaderView: View {
             .onChange(of: downloadManager.activeItems.count) { _ in
                 downloadManager.loadDownloadedIPAs()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .ksignStorageCleared)) { _ in
+                downloadManager.loadDownloadedIPAs()
+            }
             .fullScreenCover(item: $webViewURL) { url in
                 webViewSheet(url: url)
             }

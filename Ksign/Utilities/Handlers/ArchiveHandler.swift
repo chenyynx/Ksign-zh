@@ -29,7 +29,15 @@ final class ArchiveHandler: NSObject {
 		
 		super.init()
 	}
-	
+
+	/// 本次安装/导出的临时工作目录（Payload 副本 + 打包产物）。
+	var workDirectory: URL { _uniqueWorkDir }
+
+	/// 安装/导出结束后清掉临时目录；不清理会一直留到下次冷启动的 tmp 清理。
+	func clean() {
+		try? _fileManager.removeItem(at: _uniqueWorkDir)
+	}
+
 	func move() async throws {
 		guard let appUrl = Storage.shared.getAppDirectory(for: _app) else {
 			throw SigningFileHandlerError.appNotFound

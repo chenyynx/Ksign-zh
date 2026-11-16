@@ -19,6 +19,8 @@ struct BulkInstallProgressView: View {
     @StateObject var installer: ServerInstaller
     @State private var _isWebviewPresenting = false
     @State private var progressTask: Task<Void, Never>?
+    /// 安装结束后要删掉的临时工作目录
+    @State private var _archiveWorkDirectory: URL?
     
     init(app: AppInfoPresentable) {
         self.app = app
@@ -62,6 +64,11 @@ struct BulkInstallProgressView: View {
                 progressTask?.cancel()
                 progressTask = nil
                 BackgroundAudioManager.shared.stop()
+                // 安装结束后本地安装服务器不再读包，清掉临时目录。
+                if let directory = _archiveWorkDirectory {
+                    try? FileManager.default.removeItem(at: directory)
+                    _archiveWorkDirectory = nil
+                }
             default:
                 break
             }
@@ -79,12 +86,14 @@ struct BulkInstallProgressView: View {
     
     private func _install() {
         Task.detached {
+            let handler = await ArchiveHandler(app: app, viewModel: viewModel)
             do {
-                let handler = await ArchiveHandler(app: app, viewModel: viewModel)
                 try await handler.move()
-                
+
                 let packageUrl = try await handler.archive()
-                
+                let workDirectory = handler.workDirectory
+                await MainActor.run { _archiveWorkDirectory = workDirectory }
+
                 if await _installationMethod == 0 {
                     await MainActor.run {
                         installer.packageUrl = packageUrl
@@ -104,9 +113,12 @@ struct BulkInstallProgressView: View {
                 } else if await _installationMethod == 1 {
                     let proxy = await InstallationProxy(viewModel: viewModel)
                     try await proxy.install(at: packageUrl, suspend: app.identifier == Bundle.main.bundleIdentifier!)
+                    // 直接安装已结束，包不再被读取，清掉临时目录。
+                    handler.clean()
                 }
-                
+
             } catch {
+                handler.clean()
                 await MainActor.run {
                     HeartbeatManager.shared.start(true)
                 }

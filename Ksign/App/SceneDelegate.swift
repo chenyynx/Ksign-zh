@@ -58,6 +58,11 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		Self.importSharedInbox()
 	}
 
+	func sceneDidEnterBackground(_ scene: UIScene) {
+		// 退到后台时做一次存储上限检查，避免只在冷启动时才发现超限。
+		StorageJanitor.enforceIfNeeded()
+	}
+
 	// MARK: - URL / file handling
 
 	static func handle(_ url: URL, source: String) {

@@ -17,6 +17,14 @@ final class ShareViewController: UIViewController {
 	override func viewDidLoad() {
 		super.viewDidLoad()
 
+		// 异步清掉历史上分享导入留下的 tmp 副本（只删 1 小时前的旧文件，不碰本次中转）。
+		DispatchQueue.global(qos: .utility).async {
+			let freed = SharedContainer.purgeTemporaryDirectory()
+			if freed > 0 {
+				ShareDebug.log("tmp purge: freed \(freed) bytes")
+			}
+		}
+
 		model.openHost = { [weak self] in
 			guard let self, let url = URL(string: "ksign://share-import") else { return }
 			self.openHostApp(url)

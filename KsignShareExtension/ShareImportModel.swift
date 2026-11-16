@@ -31,6 +31,8 @@ final class ShareImportModel: ObservableObject {
 				let destination = inbox.appendingPathComponent("\(UUID().uuidString)-\(file.name)")
 				do {
 					try FileManager.default.copyItem(at: file.url, to: destination)
+					// 共享目录里已经有一份，中转副本立刻删掉，避免长期堆积。
+					try? FileManager.default.removeItem(at: file.url)
 					copied += 1
 				} catch {
 					// 单个文件失败不影响其余文件

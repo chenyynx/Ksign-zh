@@ -77,8 +77,9 @@ struct SettingsView: View {
                     }
 				}
 				
+				_storage()
 				_directories()
-                
+
                 Section {
                     NavigationLink(destination: ResetView()) {
                         Label(.localized("Reset"), systemImage: "trash")
@@ -112,6 +113,17 @@ extension SettingsView {
 		}
 	}
 	
+	@ViewBuilder
+	private func _storage() -> some View {
+		NBSection(.localized("Storage")) {
+			NavigationLink(destination: StorageView()) {
+				Label("存储与清理", systemImage: "internaldrive")
+			}
+		} footer: {
+			Text("查看应用数据、安装包、缓存和临时文件的实际占用，并逐项清理。")
+		}
+	}
+
 	@ViewBuilder
 	private func _directories() -> some View {
 		NBSection(.localized("Misc")) {

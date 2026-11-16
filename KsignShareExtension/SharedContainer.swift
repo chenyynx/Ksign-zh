@@ -36,4 +36,60 @@ enum SharedContainer {
 		try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
 		return url
 	}
+
+	/// 递归统计占用（用于日志里确认清理效果）。
+	static func allocatedSize(of url: URL) -> Int64 {
+		let fileManager = FileManager.default
+		var isDirectory: ObjCBool = false
+		guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
+			return 0
+		}
+
+		if !isDirectory.boolValue {
+			let attributes = try? fileManager.attributesOfItem(atPath: url.path)
+			return (attributes?[.size] as? NSNumber)?.int64Value ?? 0
+		}
+
+		let keys: [URLResourceKey] = [.totalFileAllocatedSizeKey, .fileAllocatedSizeKey]
+		guard let enumerator = fileManager.enumerator(
+			at: url,
+			includingPropertiesForKeys: keys,
+			options: [],
+			errorHandler: nil
+		) else {
+			return 0
+		}
+
+		var total: Int64 = 0
+		for case let item as URL in enumerator {
+			guard let values = try? item.resourceValues(forKeys: Set(keys)) else { continue }
+			total += Int64(values.totalFileAllocatedSize ?? values.fileAllocatedSize ?? 0)
+		}
+		return total
+	}
+
+	/// 清空扩展自己的 tmp 里超过 minimumAge 的文件。
+	/// 分享导入会先把文件复制到 tmp 再复制进共享目录，旧版本复制完不删；
+	/// 扩展启动时清一遍历史遗留。只删旧文件，避免误删本次正在用的中转副本。
+	@discardableResult
+	static func purgeTemporaryDirectory(minimumAge: TimeInterval = 3600) -> Int64 {
+		let fileManager = FileManager.default
+		let tmp = fileManager.temporaryDirectory
+		guard let items = try? fileManager.contentsOfDirectory(
+			at: tmp,
+			includingPropertiesForKeys: [.contentModificationDateKey],
+			options: []
+		) else {
+			return 0
+		}
+
+		var freed: Int64 = 0
+		for item in items {
+			let modified = (try? item.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+			guard Date().timeIntervalSince(modified) >= minimumAge else { continue }
+			freed += allocatedSize(of: item)
+			try? fileManager.removeItem(at: item)
+		}
+		return freed
+	}
 }

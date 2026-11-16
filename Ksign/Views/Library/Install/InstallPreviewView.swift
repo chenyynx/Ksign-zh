@@ -22,6 +22,8 @@ struct InstallPreviewView: View {
 	@AppStorage("Feather.serverMethod") private var _serverMethod: Int = 1
 	@State private var _isWebviewPresenting = false
     @State private var progressTask: Task<Void, Never>?
+	/// 安装/导出结束后要删掉的临时工作目录
+	@State private var _archiveWorkDirectory: URL?
 	
 	var app: AppInfoPresentable
 	@StateObject var viewModel: InstallerStatusViewModel
@@ -74,6 +76,11 @@ struct InstallPreviewView: View {
                 progressTask?.cancel()
                 progressTask = nil
                 BackgroundAudioManager.shared.stop()
+                // 安装结束（成功或失败）后，本地安装服务器不再读包，清掉临时目录。
+                if let directory = _archiveWorkDirectory {
+                    try? FileManager.default.removeItem(at: directory)
+                    _archiveWorkDirectory = nil
+                }
             default:
                 break
             }
@@ -108,12 +115,14 @@ struct InstallPreviewView: View {
         }
 
 		Task.detached {
+			let handler = await ArchiveHandler(app: app, viewModel: viewModel)
 			do {
-				let handler = await ArchiveHandler(app: app, viewModel: viewModel)
 				try await handler.move()
-				
+
 				let packageUrl = try await handler.archive()
-				
+				let workDirectory = handler.workDirectory
+				await MainActor.run { _archiveWorkDirectory = workDirectory }
+
 				if await !isSharing {
                     if await _installationMethod == 0 {
                         await MainActor.run {
@@ -133,12 +142,16 @@ struct InstallPreviewView: View {
                         }
                     }
                     else if await _installationMethod == 1 {
-                        let handler = await InstallationProxy(viewModel: viewModel)
-                        try await handler.install(at: packageUrl, suspend: app.identifier == Bundle.main.bundleIdentifier!)
+                        let proxy = await InstallationProxy(viewModel: viewModel)
+                        try await proxy.install(at: packageUrl, suspend: app.identifier == Bundle.main.bundleIdentifier!)
+                        // 直接安装已结束，包不再被读取，清掉临时目录。
+                        handler.clean()
                     }
 				} else {
 					let package = try await handler.moveToArchive(packageUrl, shouldOpen: !_useShareSheet)
-					
+					// ipa 已移进 Archives，临时目录（Payload 副本）可以删了。
+					handler.clean()
+
 					if await !_useShareSheet {
 						await MainActor.run {
 							dismiss()
@@ -153,6 +166,7 @@ struct InstallPreviewView: View {
 					}
 				}
 			} catch {
+				handler.clean()
                 await progressTask?.cancel()
 				await MainActor.run {
 					UIAlertController.showAlertWithOk(
