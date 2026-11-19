@@ -38,11 +38,32 @@ extension ServerInstaller {
 		return comps.url!
 	}
 	
+	/// 清单地址取自设置（内置自建 / 官方 / 自定义），见 ManifestServer。
 	var externalServerLink: String {
-		let baseUrl = "https://api.palera.in/genPlist?bundleid=\(app.identifier!)&name=\(app.name!)&version=\(app.version!)&fetchurl=\(self.payloadEndpoint.absoluteString)"
+		guard
+			let identifier = app.identifier,
+			let name = app.name,
+			let version = app.version
+		else {
+			return ""
+		}
+
+		// 不用 URLComponents：它对 query 值里的 `&`/`+` 不编码，会被服务端当成新参数。
+		var allowed = CharacterSet.urlQueryAllowed
+		allowed.remove(charactersIn: "&=+?#%")
+		func encode(_ value: String) -> String {
+			value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+		}
+
+		let baseUrl = ManifestServer.effectiveBase
+			+ "/genPlist?bundleid=\(encode(identifier))"
+			+ "&name=\(encode(name))"
+			+ "&version=\(encode(version))"
+			+ "&fetchurl=\(encode(payloadEndpoint.absoluteString))"
+
 		let encodedBaseUrl = baseUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
 		let finalEncodedUrl = encodedBaseUrl.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
-		
+
 		return finalEncodedUrl
 	}
 
