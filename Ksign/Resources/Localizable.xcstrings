@@ -7001,6 +7001,17 @@
         }
       }
     },
+    "Imported on %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入于 %@"
+          }
+        }
+      }
+    },
     "Importing %lld%%": {
       "extractionState": "manual",
       "localizations": {
@@ -11957,6 +11968,17 @@
         }
       }
     },
+    "Show import date": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示导入时间"
+          }
+        }
+      }
+    },
     "Show logs when signing": {
       "extractionState": "manual",
       "localizations": {
@@ -12076,6 +12098,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "导出时显示分享面板"
+          }
+        }
+      }
+    },
+    "Shows the import date under each app in the Library; signed apps show the signing date.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在资料库中每个 App 下方显示导入时间；已签名的应用显示签名时间。"
           }
         }
       }
@@ -12264,6 +12297,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "已签名应用"
+          }
+        }
+      }
+    },
+    "Signed on %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "签名于 %@"
           }
         }
       }

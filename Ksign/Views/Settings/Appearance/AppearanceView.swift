@@ -12,6 +12,8 @@ struct AppearanceView: View {
     @AppStorage("Feather.userInterfaceStyle") private var _userIntefacerStyle: Int = UIUserInterfaceStyle.unspecified.rawValue
     
 	@AppStorage("Feather.libraryCellAppearance") private var _libraryCellAppearance: Int = 0
+	/// 资料库每行是否显示导入/签名时间（与 LibraryCellView 共用同一个 key）
+	@AppStorage("Feather.showImportDate") private var _showImportDate: Bool = true
 	
 	private let _libraryCellAppearanceMethods: [String] = [
 		.localized("Standard"),
@@ -71,6 +73,15 @@ struct AppearanceView: View {
                 .labelsHidden()
 			}
 			
+			NBSection(.localized("Library")) {
+				_libraryPreview()
+				Toggle(isOn: $_showImportDate) {
+					Label(.localized("Show import date"), systemImage: "calendar")
+				}
+			} footer: {
+				Text(.localized("Shows the import date under each app in the Library; signed apps show the signing date."))
+			}
+
 			NBSection(.localized("Accent Color")) {
 				_accentColorPreview()
 				Picker(.localized("Accent Color"), selection: $_selectedAccentColor) {
@@ -106,7 +117,14 @@ struct AppearanceView: View {
 			
 			NBTitleWithSubtitleView(
 				title: Bundle.main.name,
-				subtitle: "\(Bundle.main.version) • \(Bundle.main.bundleIdentifier ?? "")",
+				subtitle: "\(Bundle.main.version) • \(Bundle.main.bundleIdentifier ?? "")" + (
+					_showImportDate
+						? "\n" + String.localized(
+							"Imported on %@",
+							arguments: Date.now.formatted(date: .numeric, time: .shortened)
+						)
+						: ""
+				),
 				linelimit: 0
 			)
 			

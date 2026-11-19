@@ -12,6 +12,8 @@ import NimbleViews
 // MARK: - View
 struct LibraryCellView: View {
 	@AppStorage("Feather.libraryCellAppearance") private var _libraryCellAppearance: Int = 0
+	/// 是否在每行下方显示导入/签名时间（设置 → 外观 → 资料库 可开关）
+	@AppStorage("Feather.showImportDate") private var _showImportDate: Bool = true
     @Environment(\.editMode) private var editMode
 	var certInfo: Date.ExpirationInfo? {
 		Storage.shared.getCertificate(from: app)?.expiration?.expirationInfo()
@@ -110,14 +112,22 @@ struct LibraryCellView: View {
 	}
 	
 	private var _desc: String {
+		var text: String
 		if
 			let version = app.version,
 			let id = app.identifier
 		{
-			return "\(version) • \(id)"
+			text = "\(version) • \(id)"
 		} else {
-			return .localized("Unknown")
+			text = .localized("Unknown")
 		}
+		if _showImportDate, let date = app.date {
+			let formatted = date.formatted(date: .numeric, time: .shortened)
+			text += "\n" + (app.isSigned
+				? .localized("Signed on %@", arguments: formatted)
+				: .localized("Imported on %@", arguments: formatted))
+		}
+		return text
 	}
 	
 	private func _toggleSelection() {
