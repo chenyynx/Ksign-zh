@@ -121,7 +121,10 @@ extension ServerInstaller {
 				if addrFamily == UInt8(AF_INET) {
 					
 					let name = String(cString: interface.ifa_name)
-					if name == "en0" || name == "pdp_ip0" {
+					// 只认 WiFi（en0）。蜂窝网卡（pdp_ip0）拿到的是运营商 CGNAT 地址（10/8），
+					// 手机自己访问不到这个地址（请求到不了本机服务器），安装页会一直白屏；
+					// 纯蜂窝时返回 nil，由 sni 的回退逻辑改用 127.0.0.1。
+					if name == "en0" {
 						
 						var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
 						if getnameinfo(interface.ifa_addr, socklen_t(interface.ifa_addr.pointee.sa_len),
