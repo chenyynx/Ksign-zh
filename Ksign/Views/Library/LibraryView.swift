@@ -137,6 +137,12 @@ struct LibraryView: View {
                     EditButton()
                 }
                 if _isEditMode.isEditing {
+					ToolbarItem(placement: .topBarLeading) {
+						Button(_isAllVisibleSelected ? String.localized("Deselect All") : String.localized("Select All")) {
+							_toggleSelectAllVisible()
+						}
+						.disabled(_visibleUUIDs.isEmpty)
+					}
 					ToolbarItemGroup(placement: .topBarTrailing) {
                         if _selectedTab == 0 {
                             Button {
@@ -271,6 +277,33 @@ extension LibraryView {
 
 // MARK: - Extension: View (Edit Mode Functions)
 extension LibraryView {
+	// MARK: 全选
+	/// 当前分段 + 当前搜索过滤后，屏幕上可见的 App（和列表渲染同一份数据，切分段/搜索都会实时变化）
+	private var _visibleUUIDs: [String] {
+		_selectedTab == 0
+			? _filteredImportedApps.compactMap(\.uuid)
+			: _filteredSignedApps.compactMap(\.uuid)
+	}
+
+	private var _isAllVisibleSelected: Bool {
+		let ids = Set(_visibleUUIDs)
+		return !ids.isEmpty && ids.isSubset(of: _selectedApps)
+	}
+
+	/// 只作用于当前可见范围：可见的已全选 → 取消这些；否则把可见的并进选择。
+	/// 搜索过滤时也成立：全选 = 选中当前搜出来的那些。
+	private func _toggleSelectAllVisible() {
+		let ids = Set(_visibleUUIDs)
+		guard !ids.isEmpty else { return }
+		withAnimation {
+			if ids.isSubset(of: _selectedApps) {
+				_selectedApps.subtract(ids)
+			} else {
+				_selectedApps.formUnion(ids)
+			}
+		}
+	}
+
 	private func _bulkDeleteSelectedApps() {
 		let appsToDelete = _selectedApps
 		
@@ -284,8 +317,12 @@ extension LibraryView {
 			}
 		}
 		
+		// 删除完成后清空选择并退出编辑状态（删完还停在编辑模式没有意义）
 		DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-			_selectedApps.removeAll()
+			withAnimation {
+				_selectedApps.removeAll()
+				_isEditMode = .inactive
+			}
 		}
 	}
 }
