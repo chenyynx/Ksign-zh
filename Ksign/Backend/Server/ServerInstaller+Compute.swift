@@ -38,7 +38,7 @@ extension ServerInstaller {
 		return comps.url!
 	}
 	
-	/// 清单地址取自设置（内置自建 / 官方 / 自定义），见 ManifestServer。
+	/// 安装服务器地址取自自动测速结果，见 InstallServer。
 	var externalServerLink: String {
 		guard
 			let identifier = app.identifier,
@@ -55,7 +55,7 @@ extension ServerInstaller {
 			value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
 		}
 
-		let baseUrl = ManifestServer.effectiveBase
+		let baseUrl = InstallServer.effectiveBase
 			+ "/genPlist?bundleid=\(encode(identifier))"
 			+ "&name=\(encode(name))"
 			+ "&version=\(encode(version))"

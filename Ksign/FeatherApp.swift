@@ -71,6 +71,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		_copyServerCertificates()
 		_addDefaultCertificates()
 
+		// 启动后先量一遍安装服务器延迟，安装时直接用最快的那台
+		InstallServerProbe.shared.probe()
+
 #if SERVER
 		// fallback just in case xd
 		_downloadSSLCertificates()

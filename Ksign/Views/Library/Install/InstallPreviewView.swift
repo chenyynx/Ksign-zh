@@ -89,6 +89,10 @@ struct InstallPreviewView: View {
 		.onAppear {
 			BackgroundAudioManager.shared.start()
 		}
+		.onAppear {
+			// 安装前重测一次，避免用过期的选服结果
+			InstallServerProbe.shared.probe()
+		}
 		.onDisappear {
             progressTask?.cancel()
             progressTask = nil

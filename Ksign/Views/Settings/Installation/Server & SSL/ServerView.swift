@@ -10,22 +10,14 @@ import SwiftUI
 import NimbleJSON
 import NimbleViews
 
-// MARK: - Manifest server test state
-private enum ManifestServerTestState: Equatable {
-	case idle
-	case testing
-	case reachable(milliseconds: Int)
-	case failed(message: String)
-}
-
 struct ServerView: View {
 	@AppStorage("Feather.ipFix") private var _ipFix: Bool = false
 	@AppStorage("Feather.serverMethod") private var _serverMethod: Int = 1
 
-	// P1：OTA 清单服务（默认自建；官方 palera.in 已停服；可自定义）
-	@AppStorage(ManifestServer.Keys.source) private var _manifestSource: Int = ManifestServer.Source.builtIn.rawValue
-	@AppStorage(ManifestServer.Keys.customBase) private var _manifestBase: String = ""
-	@State private var _manifestTest: ManifestServerTestState = .idle
+	// 安装服务器：打开本页自动测速，自动用延迟最低的一台
+	@AppStorage(InstallServer.Keys.custom) private var _customBase: String = ""
+	@ObservedObject private var _probe = InstallServerProbe.shared
+	@State private var _pendingProbe: DispatchWorkItem?
 
 	private let _serverMethods: [String] = [
 		.localized("Fully Local"),
@@ -62,58 +54,54 @@ struct ServerView: View {
 				}
 			}
 
-			_manifestSection()
+			_installServerSection()
 		}
-		.onChange(of: _manifestSource) { _ in
-			_manifestTest = .idle
+		.onAppear {
+			_probe.probe()
 		}
-		.onChange(of: _manifestBase) { _ in
-			_manifestTest = .idle
+		.onChange(of: _customBase) { _ in
+			// 输入防抖：停手 0.8s 再测，免得每敲一个字发一次请求
+			_pendingProbe?.cancel()
+			let work = DispatchWorkItem { _probe.probe() }
+			_pendingProbe = work
+			DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
 		}
 	}
 
-	// MARK: - Manifest server
+	// MARK: - Install server
 	@ViewBuilder
-	private func _manifestSection() -> some View {
-		NBSection(.localized("Manifest Server"), systemName: "list.bullet.rectangle.portrait") {
-			Picker(.localized("Source"), systemImage: "server.rack", selection: $_manifestSource) {
-				Text(.localized("Default (Built-in)")).tag(ManifestServer.Source.builtIn.rawValue)
-				Text(.localized("Official (api.palera.in, offline)")).tag(ManifestServer.Source.official.rawValue)
-				Text(.localized("Custom")).tag(ManifestServer.Source.custom.rawValue)
+	private func _installServerSection() -> some View {
+		NBSection(.localized("Install Server"), systemName: "server.rack") {
+			ForEach(InstallServer.candidates, id: \.self) { base in
+				_installServerRow(base)
 			}
 
-			if _manifestSource == ManifestServer.Source.custom.rawValue {
-				TextField(.localized("https://example.com"), text: $_manifestBase)
-					.keyboardType(.URL)
-					.textInputAutocapitalization(.never)
-					.autocorrectionDisabled()
+			TextField(.localized("Custom server URL"), text: $_customBase)
+				.keyboardType(.URL)
+				.textInputAutocapitalization(.never)
+				.autocorrectionDisabled()
 
-				if !ManifestServer.isCustomValid {
-					Label(
-						.localized("Enter a full address starting with https://. While invalid, the built-in server is used."),
-						systemImage: "exclamationmark.triangle.fill"
-					)
-					.font(.caption)
-					.foregroundStyle(.red)
-				}
+			if !InstallServer.isCustomInputValid {
+				Label(
+					.localized("Invalid URL. Use a full address starting with https://."),
+					systemImage: "exclamationmark.triangle.fill"
+				)
+				.font(.caption)
+				.foregroundStyle(.red)
 			}
 
 			Button {
-				_testManifestServer()
+				_probe.probe()
 			} label: {
-				HStack(spacing: 8) {
-					Label(.localized("Test Connection"), systemImage: "antenna.radiowaves.left.and.right")
-					Spacer(minLength: 8)
-					_manifestTestBadge()
-				}
+				Label(.localized("Speed Test Again"), systemImage: "arrow.clockwise")
 			}
-			.disabled(_manifestTest == .testing)
+			.disabled(_probe.isProbing)
 		} footer: {
 			VStack(alignment: .leading, spacing: 4) {
-				Text(.localized("Used to build the OTA install manifest (itms-services). Keep it on Default unless you host your own manifest server."))
+				Text(.localized("Speed-tests automatically when this page opens and uses the lowest-latency server."))
 				HStack(spacing: 2) {
 					Text(.localized("In use:"))
-					Text(ManifestServer.effectiveBase)
+					Text(InstallServer.effectiveBase)
 						.textSelection(.enabled)
 				}
 			}
@@ -121,55 +109,45 @@ struct ServerView: View {
 	}
 
 	@ViewBuilder
-	private func _manifestTestBadge() -> some View {
-		switch _manifestTest {
-		case .idle:
-			EmptyView()
-		case .testing:
-			ProgressView()
-				.controlSize(.small)
-		case .reachable(let milliseconds):
-			// 注意：Label 的 .localized 会解析到 LocalizedStringKey 的重载，带参数的
-			// 版本必须显式用 Text，否则报 LocalizedStringResource has no member localized。
-			Label {
-				Text(String.localized("%lld ms", arguments: milliseconds))
-			} icon: {
-				Image(systemName: "checkmark.circle.fill")
-			}
-			.labelStyle(.titleAndIcon)
-			.font(.caption)
-			.foregroundStyle(.green)
-		case .failed(let message):
-			Label(message, systemImage: "xmark.circle.fill")
-				.font(.caption)
-				.foregroundStyle(.red)
+	private func _installServerRow(_ base: String) -> some View {
+		HStack(spacing: 10) {
+			Image(systemName: base == InstallServer.builtInBase ? "server.rack" : "link")
+				.foregroundStyle(.secondary)
+				.frame(width: 22)
+
+			Text(URL(string: base)?.host ?? base)
 				.lineLimit(1)
+				.truncationMode(.middle)
+
+			Spacer(minLength: 8)
+
+			_latencyBadge(for: base)
+
+			if InstallServer.effectiveBase == base {
+				Image(systemName: "checkmark.circle.fill")
+					.foregroundStyle(.tint)
+			}
 		}
 	}
 
-	private func _testManifestServer() {
-		guard let url = URL(string: ManifestServer.effectiveBase + "/health") else {
-			_manifestTest = .failed(message: .localized("Server unreachable"))
-			return
+	@ViewBuilder
+	private func _latencyBadge(for base: String) -> some View {
+		switch _probe.states[base] {
+		case .none:
+			Text("—")
+				.font(.caption)
+				.foregroundStyle(.secondary)
+		case .some(.probing):
+			ProgressView()
+				.controlSize(.small)
+		case .some(.ok(let milliseconds)):
+			Text(String.localized("%lld ms", arguments: milliseconds))
+				.font(.caption.monospacedDigit())
+				.foregroundStyle(.green)
+		case .some(.failed):
+			Text(.localized("Unavailable"))
+				.font(.caption)
+				.foregroundStyle(.red)
 		}
-
-		_manifestTest = .testing
-
-		var request = URLRequest(url: url)
-		request.timeoutInterval = 8
-		request.cachePolicy = .reloadIgnoringLocalCacheData
-
-		let start = Date()
-		URLSession.shared.dataTask(with: request) { _, response, error in
-			DispatchQueue.main.async {
-				if let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
-					_manifestTest = .reachable(milliseconds: Int(Date().timeIntervalSince(start) * 1000))
-				} else if let http = response as? HTTPURLResponse {
-					_manifestTest = .failed(message: .localized("Server returned status %lld", arguments: http.statusCode))
-				} else {
-					_manifestTest = .failed(message: error?.localizedDescription ?? .localized("Server unreachable"))
-				}
-			}
-		}.resume()
 	}
 }

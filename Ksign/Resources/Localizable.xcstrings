@@ -16234,90 +16234,13 @@
         }
       }
     },
-    "Manifest Server": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清单服务器"
-          }
-        }
-      }
-    },
-    "Default (Built-in)": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "默认（内置）"
-          }
-        }
-      }
-    },
-    "Official (api.palera.in, offline)": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "官方（api.palera.in，已停用）"
-          }
-        }
-      }
-    },
-    "Custom": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自定义"
-          }
-        }
-      }
-    },
-    "Used to build the OTA install manifest (itms-services). Keep it on Default unless you host your own manifest server.": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用于生成 OTA 安装清单（itms-services）。除非你自建清单服务器，否则保持「默认」。"
-          }
-        }
-      }
-    },
     "In use:": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当前生效："
-          }
-        }
-      }
-    },
-    "Enter a full address starting with https://. While invalid, the built-in server is used.": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请输入以 https:// 开头的完整地址；地址无效时使用内置服务器。"
-          }
-        }
-      }
-    },
-    "Test Connection": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "测试连接"
+            "value": "当前使用："
           }
         }
       }
@@ -16333,24 +16256,68 @@
         }
       }
     },
-    "Server returned status %lld": {
+    "Install Server": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "服务器返回状态 %lld"
+            "value": "安装服务器"
           }
         }
       }
     },
-    "Server unreachable": {
+    "Custom server URL": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法连接服务器"
+            "value": "自定义服务器地址"
+          }
+        }
+      }
+    },
+    "Speed Test Again": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新测速"
+          }
+        }
+      }
+    },
+    "Unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不可用"
+          }
+        }
+      }
+    },
+    "Speed-tests automatically when this page opens and uses the lowest-latency server.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开本页会自动测速，并使用延迟最低的服务器。"
+          }
+        }
+      }
+    },
+    "Invalid URL. Use a full address starting with https://.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地址无效，请填写以 https:// 开头的完整地址。"
           }
         }
       }
