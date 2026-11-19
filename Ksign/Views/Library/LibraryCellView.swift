@@ -54,10 +54,13 @@ struct LibraryCellView: View {
 				Text(_desc)
 					.font(.subheadline)
 					.foregroundStyle(.secondary)
+					.lineLimit(1)
+					.truncationMode(.middle)
 				if let dateLine = _dateLine {
 					Text(dateLine)
 						.font(.caption)
 						.foregroundStyle(.secondary)
+						.lineLimit(1)
 				}
 			}
 			.frame(maxWidth: .infinity, alignment: .leading)
