@@ -13,7 +13,9 @@ struct AppIconOption {
     let id: String
     let title: String
     let subtitle: String
-    let iconName: String
+    /// 预览图必须用独立的 imageset：appiconset 不能在运行时用 UIImage(named:) 取，
+    /// 之前取不到就回退成「当前图标」，导致 7 行预览全是一样的颜色。
+    let previewImageName: String
     let alternateIconName: String?
 }
 
@@ -26,49 +28,49 @@ struct AppIconView: View {
             id: "purple",
             title: "Purple",
             subtitle: "Ksign",
-            iconName: "AppIcon",
+            previewImageName: "AppIconPreview",
             alternateIconName: nil
         ),
         AppIconOption(
             id: "red",
             title: "Red",
             subtitle: "Ksign",
-            iconName: "AppIconRed",
+            previewImageName: "AppIconPreviewRed",
             alternateIconName: "AppIconRed"
         ),
         AppIconOption(
             id: "pink",
             title: "Pink",
             subtitle: "Ksign",
-            iconName: "AppIconPink",
+            previewImageName: "AppIconPreviewPink",
             alternateIconName: "AppIconPink"
         ),
         AppIconOption(
             id: "blue",
             title: "Blue",
             subtitle: "Ksign",
-            iconName: "AppIconBlue",
+            previewImageName: "AppIconPreviewBlue",
             alternateIconName: "AppIconBlue"
         ),
         AppIconOption(
             id: "green",
             title: "Green",
             subtitle: "Ksign",
-            iconName: "AppIconGreen",
+            previewImageName: "AppIconPreviewGreen",
             alternateIconName: "AppIconGreen"
         ),
         AppIconOption(
             id: "orange",
             title: "Orange",
             subtitle: "Ksign",
-            iconName: "AppIconOrange",
+            previewImageName: "AppIconPreviewOrange",
             alternateIconName: "AppIconOrange"
         ),
         AppIconOption(
             id: "black",
             title: "Black",
             subtitle: "Ksign",
-            iconName: "AppIconBlack",
+            previewImageName: "AppIconPreviewBlack",
             alternateIconName: "AppIconBlack"
         ),
     ]
@@ -96,7 +98,7 @@ extension AppIconView {
             _changeAppIcon(to: iconOption)
         } label: {
             HStack(spacing: 12) {
-                if let image = UIImage(named: iconOption.iconName) ?? UIImage(named: Bundle.main.iconFileName ?? "") {
+                if let image = UIImage(named: iconOption.previewImageName) {
                     Image(uiImage: image)
                         .appIconStyle(size: 60)
                 } else {
