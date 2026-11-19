@@ -40,6 +40,9 @@ struct SettingsView: View {
 					NavigationLink(destination: AppearanceView()) {
                         Label(.localized("Appearance"), systemImage: "paintbrush")
                     }
+					NavigationLink(destination: AppIconView()) {
+						Label(.localized("App Icon"), systemImage: "app.badge")
+					}
 				}
                 
                 NBSection(.localized("Certificates")) {

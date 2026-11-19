@@ -111,7 +111,7 @@ struct ServerView: View {
 	@ViewBuilder
 	private func _installServerRow(_ base: String) -> some View {
 		HStack(spacing: 10) {
-			Image(systemName: base == InstallServer.builtInBase ? "server.rack" : "link")
+			Image(systemName: "server.rack")
 				.foregroundStyle(.secondary)
 				.frame(width: 22)
 
@@ -121,12 +121,13 @@ struct ServerView: View {
 
 			Spacer(minLength: 8)
 
+			// 固定宽度 + 常驻勾选占位，保证两行的毫秒数右对齐
 			_latencyBadge(for: base)
+				.frame(minWidth: 62, alignment: .trailing)
 
-			if InstallServer.effectiveBase == base {
-				Image(systemName: "checkmark.circle.fill")
-					.foregroundStyle(.tint)
-			}
+			Image(systemName: "checkmark.circle.fill")
+				.foregroundStyle(.tint)
+				.opacity(InstallServer.effectiveBase == base ? 1 : 0)
 		}
 	}
 
