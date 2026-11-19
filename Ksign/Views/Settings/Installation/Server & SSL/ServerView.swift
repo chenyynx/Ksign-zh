@@ -129,10 +129,16 @@ struct ServerView: View {
 			ProgressView()
 				.controlSize(.small)
 		case .reachable(let milliseconds):
-			Label(.localized("%lld ms", arguments: milliseconds), systemImage: "checkmark.circle.fill")
-				.labelStyle(.titleAndIcon)
-				.font(.caption)
-				.foregroundStyle(.green)
+			// 注意：Label 的 .localized 会解析到 LocalizedStringKey 的重载，带参数的
+			// 版本必须显式用 Text，否则报 LocalizedStringResource has no member localized。
+			Label {
+				Text(String.localized("%lld ms", arguments: milliseconds))
+			} icon: {
+				Image(systemName: "checkmark.circle.fill")
+			}
+			.labelStyle(.titleAndIcon)
+			.font(.caption)
+			.foregroundStyle(.green)
 		case .failed(let message):
 			Label(message, systemImage: "xmark.circle.fill")
 				.font(.caption)
