@@ -12841,6 +12841,17 @@
         }
       }
     },
+    "Storage": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "存储"
+          }
+        }
+      }
+    },
     "Store Cell Appearance": {
       "extractionState": "manual",
       "localizations": {
