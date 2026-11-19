@@ -39,12 +39,10 @@ final class InstallServerProbe: ObservableObject {
 		}
 
 		let group = DispatchGroup()
-		let lock = NSLock()
-		var measured: [String: State] = [:]
 
 		for base in candidates {
 			guard let url = URL(string: base + Self.probePath) else {
-				measured[base] = .failed
+				states[base] = .failed
 				continue
 			}
 
@@ -64,9 +62,14 @@ final class InstallServerProbe: ObservableObject {
 					state = .failed
 				}
 
-				lock.lock()
-				measured[base] = state
-				lock.unlock()
+				// 谁先回来谁先显示，别让慢/挂掉的那台拖住整页
+				DispatchQueue.main.async { [weak self] in
+					guard let self, self.generation == current else { return }
+					self.states[base] = state
+					if case .ok = state {
+						self._selectLowest(from: self.states)
+					}
+				}
 
 				group.leave()
 			}.resume()
@@ -74,21 +77,22 @@ final class InstallServerProbe: ObservableObject {
 
 		group.notify(queue: .main) { [weak self] in
 			guard let self, self.generation == current else { return }
-
-			// 先落选中值，再发布状态，保证界面刷新时勾选和毫秒数是同一轮结果。
-			let best = measured.compactMap { (base, state) -> (String, Int)? in
-				if case .ok(let milliseconds) = state {
-					return (base, milliseconds)
-				}
-				return nil
-			}.min { $0.1 < $1.1 }?.0
-
-			if let best {
-				InstallServer.setSelected(best)
-			}
-
-			self.states = measured
+			self._selectLowest(from: self.states)
 			self.isProbing = false
+		}
+	}
+
+	/// 在已测出的结果里挑延迟最低的一台；失败/未返回的不参与
+	private func _selectLowest(from states: [String: State]) {
+		let best = states.compactMap { (base, state) -> (String, Int)? in
+			if case .ok(let milliseconds) = state {
+				return (base, milliseconds)
+			}
+			return nil
+		}.min { $0.1 < $1.1 }?.0
+
+		if let best {
+			InstallServer.setSelected(best)
 		}
 	}
 

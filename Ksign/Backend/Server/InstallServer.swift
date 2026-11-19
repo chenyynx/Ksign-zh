@@ -15,6 +15,9 @@ import Foundation
 enum InstallServer {
 	/// 内置安装服务器（自建）
 	static let builtInBase = "https://ksign.pipicore.cn"
+	/// 上游原来的清单服务。2026-10 起 521，但保留在候选里：
+	/// 哪天恢复了就自动参与测速，不恢复就显示「不可用」，不影响选择。
+	static let legacyBase = "https://api.palera.in"
 
 	enum Keys {
 		/// 当前选中的服务器（自动挑延迟最低的）
@@ -23,9 +26,9 @@ enum InstallServer {
 		static let custom = "Feather.installServerCustom"
 	}
 
-	/// 参与自动选择的服务器（内置 + 自定义，去重）
+	/// 参与自动选择的服务器（内置 + 原有服务 + 自定义，去重）
 	static var candidates: [String] {
-		var list = [builtInBase]
+		var list = [builtInBase, legacyBase]
 		if let custom = normalizedCustomBase, !list.contains(custom) {
 			list.append(custom)
 		}
