@@ -239,6 +239,10 @@ struct LibraryView: View {
                     _selectedInstallAppPresenting = AnyApp(base: app)
 				}
 			}
+			.onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ksign.shareImported"))) { _ in
+				// 分享导入的是未签名包，落在「下载的 App」分段
+				_selectedTab = 0
+			}
         }
         .onChange(of: _isEditMode) { state in
             if !state.isEditing {

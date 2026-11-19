@@ -158,6 +158,9 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 		if count > 0 {
 			DiagLog.log("shareInbox: draining \(count) file(s)")
+			// 分享导入后跳到资料库（并让资料库切到「下载的 App」分段）
+			TabRouter.shared.select(.library)
+			NotificationCenter.default.post(name: NSNotification.Name("ksign.shareImported"), object: nil)
 		}
 	}
 
