@@ -115,18 +115,23 @@ struct AppearanceView: View {
 			Image(uiImage: (UIImage(named: Bundle.main.iconFileName ?? ""))! )
 				.appIconStyle(size: 57)
 			
-			NBTitleWithSubtitleView(
-				title: Bundle.main.name,
-				subtitle: "\(Bundle.main.version) • \(Bundle.main.bundleIdentifier ?? "")" + (
-					_showImportDate
-						? "\n" + String.localized(
-							"Imported on %@",
-							arguments: Date.now.formatted(date: .numeric, time: .shortened)
-						)
-						: ""
-				),
-				linelimit: 0
-			)
+			// 和资料库真实行一致：标题 / 版本 • Bundle ID / 日期（独立一行小字）
+			VStack(alignment: .leading, spacing: 2) {
+				Text(Bundle.main.name)
+					.font(.headline)
+				Text("\(Bundle.main.version) • \(Bundle.main.bundleIdentifier ?? "")")
+					.font(.subheadline)
+					.foregroundStyle(.secondary)
+				if _showImportDate {
+					Text(String.localized(
+						"Imported on %@",
+						arguments: Date.now.formatted(date: .numeric, time: .shortened)
+					))
+					.font(.caption)
+					.foregroundStyle(.secondary)
+				}
+			}
+			.frame(maxWidth: .infinity, alignment: .leading)
 			
 			FRExpirationPillView(
 				title: .localized("Install"),

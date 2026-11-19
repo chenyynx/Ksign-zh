@@ -47,11 +47,20 @@ struct LibraryCellView: View {
 			
 			FRAppIconView(app: app, size: 57)
 			
-			NBTitleWithSubtitleView(
-				title: app.name ?? .localized("Unknown"),
-				subtitle: _desc,
-				linelimit: 0
-			)
+			// 标题 / 版本 • Bundle ID / 导入或签名时间（时间单独一行小字，外观里可开关）
+			VStack(alignment: .leading, spacing: 2) {
+				Text(app.name ?? .localized("Unknown"))
+					.font(.headline)
+				Text(_desc)
+					.font(.subheadline)
+					.foregroundStyle(.secondary)
+				if let dateLine = _dateLine {
+					Text(dateLine)
+						.font(.caption)
+						.foregroundStyle(.secondary)
+				}
+			}
+			.frame(maxWidth: .infinity, alignment: .leading)
 			
 			Spacer()
 			
@@ -112,22 +121,30 @@ struct LibraryCellView: View {
 	}
 	
 	private var _desc: String {
-		var text: String
 		if
 			let version = app.version,
 			let id = app.identifier
 		{
-			text = "\(version) • \(id)"
+			return "\(version) • \(id)"
 		} else {
-			text = .localized("Unknown")
+			return .localized("Unknown")
 		}
-		if _showImportDate, let date = app.date {
-			let formatted = date.formatted(date: .numeric, time: .shortened)
-			text += "\n" + (app.isSigned
-				? .localized("Signed on %@", arguments: formatted)
-				: .localized("Imported on %@", arguments: formatted))
-		}
-		return text
+	}
+
+	/// 独立一行的日期文案；关闭开关或没有日期时返回 nil，整行不渲染。
+	private var _dateLine: String? {
+		guard _showImportDate, let date = _date else { return nil }
+		let formatted = date.formatted(date: .numeric, time: .shortened)
+		return app.isSigned
+			? .localized("Signed on %@", arguments: formatted)
+			: .localized("Imported on %@", arguments: formatted)
+	}
+
+	/// 正常取 Core Data 的 date；旧数据缺 date 时退回应用目录的创建时间，保证这行有内容。
+	private var _date: Date? {
+		if let date = app.date { return date }
+		guard let url = Storage.shared.getUuidDirectory(for: app) else { return nil }
+		return (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate
 	}
 	
 	private func _toggleSelection() {
