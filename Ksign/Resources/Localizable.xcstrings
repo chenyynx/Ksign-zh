@@ -16321,6 +16321,17 @@
           }
         }
       }
+    },
+    "Black": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "黑色"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

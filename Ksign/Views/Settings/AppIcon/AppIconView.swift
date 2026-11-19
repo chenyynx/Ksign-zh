@@ -23,13 +23,54 @@ struct AppIconView: View {
     
     private let appIcons: [AppIconOption] = [
         AppIconOption(
-            id: "primary",
-            title: "Default",
+            id: "purple",
+            title: "Purple",
             subtitle: "Ksign",
             iconName: "AppIcon",
             alternateIconName: nil
         ),
-
+        AppIconOption(
+            id: "red",
+            title: "Red",
+            subtitle: "Ksign",
+            iconName: "AppIconRed",
+            alternateIconName: "AppIconRed"
+        ),
+        AppIconOption(
+            id: "pink",
+            title: "Pink",
+            subtitle: "Ksign",
+            iconName: "AppIconPink",
+            alternateIconName: "AppIconPink"
+        ),
+        AppIconOption(
+            id: "blue",
+            title: "Blue",
+            subtitle: "Ksign",
+            iconName: "AppIconBlue",
+            alternateIconName: "AppIconBlue"
+        ),
+        AppIconOption(
+            id: "green",
+            title: "Green",
+            subtitle: "Ksign",
+            iconName: "AppIconGreen",
+            alternateIconName: "AppIconGreen"
+        ),
+        AppIconOption(
+            id: "orange",
+            title: "Orange",
+            subtitle: "Ksign",
+            iconName: "AppIconOrange",
+            alternateIconName: "AppIconOrange"
+        ),
+        AppIconOption(
+            id: "black",
+            title: "Black",
+            subtitle: "Ksign",
+            iconName: "AppIconBlack",
+            alternateIconName: "AppIconBlack"
+        ),
     ]
     
     // MARK: Body
