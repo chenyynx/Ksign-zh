@@ -98,7 +98,14 @@ class ServerInstaller: Identifiable, ObservableObject {
 	}
 		
 	static func getServerMethod() -> Int {
-		UserDefaults.standard.integer(forKey: "Feather.serverMethod")
+		// 界面上这个值是 @AppStorage，默认 1（半本地）；这里直接读 UserDefaults，
+		// key 不存在时 integer(forKey:) 返回 0（完全本地）——两处默认值不一致，
+		// 表现就是「设置里明明选着半本地，实际按完全本地起 https + *.backloop.dev」，
+		// 安装页永远证书错误。key 缺失时按界面的默认值 1 处理。
+		if UserDefaults.standard.object(forKey: "Feather.serverMethod") == nil {
+			return 1
+		}
+		return UserDefaults.standard.integer(forKey: "Feather.serverMethod")
 	}
 	
 	static func getIPFix() -> Bool {
